@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Courses — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="../assets/images/logo.png" alt="" class="brand-logo-slot" onerror="this.style.display='none'">
+      <span class="brand-name-slot">Enterprise LMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+      <a href="courses.html" class="nav-link active">📚 My Courses</a>
+      <a href="ai-mentor.html" class="nav-link">🤖 AI Mentor</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip"><span class="u-name" id="currentUserName"></span><span class="u-role" id="currentUserRole"></span></div>
+      <button class="btn-logout" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>My Courses</h1><p class="text-muted">Your trainings, and what's available to join</p></div>
+    </header>
+    <section class="content">
+      <div id="alertBox" class="hidden"></div>
+
+      <h2 class="mb-16">My trainings</h2>
+      <div id="myCourses" class="mb-24"><p class="text-muted">Loading…</p></div>
+
+      <h2 class="mb-16">Available trainings</h2>
+      <div id="availableCourses"><p class="text-muted">Loading…</p></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop hidden" id="viewModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header"><h2 id="viewTitle">Training</h2><button class="modal-close" id="closeViewModal">&times;</button></div>
+    <div id="viewAlert" class="hidden"></div>
+    <p class="text-muted mb-16" id="viewDescription"></p>
+    <div id="viewModules" class="mb-24"></div>
+    <div id="progressSection"></div>
+  </div>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script>
+  requireAuth(['Trainee']);
+
+  let myEnrollments = [];
+  let availableCourses = [];
+
+  async function loadAll() {
+    try {
+      const [mine, all] = await Promise.all([apiFetch('/courses/mine'), apiFetch('/courses')]);
+      myEnrollments = mine;
+      const enrolledIds = mine.map((m) => m.course_id);
+      availableCourses = all.filter((c) => !enrolledIds.includes(c.course_id));
+      renderMine();
+      renderAvailable();
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  }
+
+  function renderMine() {
+    const el = document.getElementById('myCourses');
+    el.innerHTML = myEnrollments.length ? myEnrollments.map((e) => `
+      <div class="card mb-16">
+        <div class="flex-between" style="margin-bottom:10px;">
+          <strong>${escapeHtml(e.title)}</strong>
+          <span class="badge ${statusBadgeClass(e.status)}">${escapeHtml(e.status)}</span>
+        </div>
+        <div class="progress-track mb-16"><div class="progress-fill" style="width:${e.progress}%;"></div></div>
+        <div class="flex-between">
+          <span class="text-muted">${e.progress}% complete</span>
+          <button class="btn btn-secondary btn-sm" onclick="openCourse(${e.course_id})">Open</button>
+        </div>
+      </div>`).join('') : '<p class="text-muted">Nothing yet — join a training below.</p>';
+  }
+
+  function renderAvailable() {
+    const el = document.getElementById('availableCourses');
+    el.innerHTML = availableCourses.length ? availableCourses.map((c) => `
+      <div class="card mb-16">
+        <div class="flex-between">
+          <div>
+            <strong>${escapeHtml(c.title)}</strong>
+            <p class="text-muted mt-8">${escapeHtml(c.description || 'No description provided.')}</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="requestEnroll(${c.course_id})">Request to Join</button>
+        </div>
+      </div>`).join('') : '<p class="text-muted">No other trainings published right now.</p>';
+  }
+
+  window.requestEnroll = async function (courseId) {
+    try {
+      await apiFetch(`/courses/${courseId}/request-enroll`, { method: 'POST' });
+      loadAll();
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  };
+
+  window.openCourse = async function (courseId) {
+    const detail = await apiFetch(`/courses/${courseId}`);
+    document.getElementById('viewTitle').textContent = detail.title;
+    document.getElementById('viewDescription').textContent = detail.description || '';
+    document.getElementById('viewModules').innerHTML = detail.modules.length
+      ? '<h3 class="mb-16">Content</h3>' + detail.modules.map((m) => `<div class="mb-16"><strong>${escapeHtml(m.title)}</strong><p class="text-muted">${escapeHtml(m.content || '')}</p></div>`).join('')
+      : '<p class="text-muted">No content added yet.</p>';
+
+    const enrollment = detail.myEnrollment;
+    if (enrollment) {
+      document.getElementById('progressSection').innerHTML = `
+        <h3 class="mb-16">My progress</h3>
+        <div class="progress-track mb-16"><div class="progress-fill" style="width:${enrollment.progress}%;"></div></div>
+        <div class="form-row" style="align-items:end;">
+          <div class="form-group" style="margin-bottom:0;"><label>Update progress (%)</label><input type="number" min="0" max="100" id="progressInput" value="${enrollment.progress}"></div>
+          <button class="btn btn-primary" onclick="updateMyProgress(${courseId})">Save</button>
+        </div>`;
+    } else {
+      document.getElementById('progressSection').innerHTML = '<p class="text-muted">Your enrollment request is pending approval.</p>';
+    }
+    document.getElementById('viewModal').classList.remove('hidden');
+  };
+
+  window.updateMyProgress = async function (courseId) {
+    const progress = document.getElementById('progressInput').value;
+    try {
+      await apiFetch(`/courses/${courseId}/enroll/${getUser().id}`, { method: 'PUT', body: JSON.stringify({ progress: Number(progress) }) });
+      document.getElementById('viewModal').classList.add('hidden');
+      loadAll();
+    } catch (err) {
+      showAlert(document.getElementById('viewAlert'), err.message);
+    }
+  };
+
+  document.getElementById('closeViewModal').addEventListener('click', () => document.getElementById('viewModal').classList.add('hidden'));
+
+  loadAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="../assets/images/logo.png" alt="" class="brand-logo-slot" onerror="this.style.display='none'">
+      <span class="brand-name-slot">Enterprise LMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+      <a href="my-team.html" class="nav-link">👥 My Team</a>
+      <a href="trainings.html" class="nav-link">📚 Trainings</a>
+      <a href="reports.html" class="nav-link active">📈 Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip"><span class="u-name" id="currentUserName"></span><span class="u-role" id="currentUserRole"></span></div>
+      <button class="btn-logout" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>Reports</h1><p class="text-muted">Export your team's training data</p></div>
+    </header>
+    <section class="content">
+      <div id="alertBox" class="hidden"></div>
+      <div class="card" style="max-width:420px;">
+        <h3 class="mb-8">My Team Report</h3>
+        <p class="text-muted mb-16">Each trainee on your team, their enrollments, completions, and average progress.</p>
+        <button class="btn btn-primary" id="downloadBtn">⬇ Download Excel</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script>
+  requireAuth(['Supervisor']);
+
+  document.getElementById('downloadBtn').addEventListener('click', async () => {
+    try {
+      await downloadReport('/reports/supervisor/team', 'my-team-report.xlsx');
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  });
+</script>
+</body>
+</html>

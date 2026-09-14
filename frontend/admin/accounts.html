@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accounts — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="../assets/images/logo.png" alt="" class="brand-logo-slot" onerror="this.style.display='none'">
+      <span class="brand-name-slot">Enterprise LMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+      <a href="accounts.html" class="nav-link active">👤 Accounts</a>
+      <a href="trainings.html" class="nav-link">📚 Trainings</a>
+      <a href="reports.html" class="nav-link">📈 Reports</a>
+      <a href="settings.html" class="nav-link">⚙️ Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip"><span class="u-name" id="currentUserName"></span><span class="u-role" id="currentUserRole"></span></div>
+      <button class="btn-logout" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>Accounts</h1><p class="text-muted">Manage admin, supervisor and trainee accounts</p></div>
+      <button class="btn btn-primary" id="newAccountBtn">+ New Account</button>
+    </header>
+    <section class="content">
+      <div id="alertBox" class="hidden"></div>
+
+      <div class="card mb-24">
+        <div class="form-row" style="align-items:end;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Search</label>
+            <input type="search" id="searchInput" placeholder="Search by name or username...">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Filter by role</label>
+            <select id="roleFilter">
+              <option value="">All roles</option>
+              <option value="Admin">Admin</option>
+              <option value="Supervisor">Supervisor</option>
+              <option value="Trainee">Trainee</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Department</th><th>Supervisor</th><th>Status</th><th></th></tr></thead>
+          <tbody id="usersTable"><tr><td colspan="7" class="text-muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Create / Edit modal -->
+<div class="modal-backdrop hidden" id="accountModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">New Account</h2>
+      <button class="modal-close" id="closeModalBtn">&times;</button>
+    </div>
+    <div id="modalAlert" class="hidden"></div>
+    <form id="accountForm">
+      <input type="hidden" id="editUserId">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="f_name" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="f_username" required>
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select id="f_role" required>
+            <option value="Admin">Admin</option>
+            <option value="Supervisor">Supervisor</option>
+            <option value="Trainee" selected>Trainee</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label id="passwordLabel">Password</label>
+        <input type="password" id="f_password" placeholder="Min. 8 characters">
+        <p class="text-muted mt-8" id="passwordHint" style="font-size:12px;"></p>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Department</label>
+          <input type="text" id="f_department" placeholder="e.g. Production">
+        </div>
+        <div class="form-group" id="supervisorField">
+          <label>Supervisor</label>
+          <select id="f_supervisor_id"><option value="">— None —</option></select>
+        </div>
+      </div>
+      <div class="form-group" id="learningStyleField">
+        <label>Learning Style</label>
+        <select id="f_learning_style">
+          <option value="Not Assessed">Not Assessed</option>
+          <option value="Visual Module">Visual</option>
+          <option value="Auditory Module">Auditory</option>
+          <option value="Reading/Writing Module">Reading/Writing</option>
+          <option value="Kinesthetic Module">Kinesthetic</option>
+        </select>
+        <p class="text-muted mt-8" style="font-size:12px;">Used by the AI mentor to adapt how it explains things.</p>
+      </div>
+      <div class="form-group" id="gemLinkField">
+        <label>Gemini Gem link (optional)</label>
+        <input type="text" id="f_gem_link" placeholder="https://gemini.google.com/gem/...">
+        <p class="text-muted mt-8" style="font-size:12px;">Paste the share link after you create this trainee's personal AI mentor Gem in Gemini.</p>
+      </div>
+      <div class="form-group" id="statusField">
+        <label>Status</label>
+        <select id="f_status">
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="flex-between mt-24">
+        <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveBtn">Save Account</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete confirm -->
+<div class="modal-backdrop hidden" id="deleteModal">
+  <div class="modal" style="max-width:400px;">
+    <h2 class="mb-16">Delete this account?</h2>
+    <p class="text-muted mb-24">This permanently removes the account and its enrollment history. This can't be undone.</p>
+    <div class="flex-between">
+      <button class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script>
+  requireAuth(['Admin']);
+
+  let allUsers = [];
+  let supervisors = [];
+  let pendingDeleteId = null;
+
+  async function loadSupervisors() {
+    supervisors = await apiFetch('/users/supervisors');
+    const sel = document.getElementById('f_supervisor_id');
+    sel.innerHTML = '<option value="">— None —</option>' +
+      supervisors.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  }
+
+  async function loadUsers() {
+    const role = document.getElementById('roleFilter').value;
+    const search = document.getElementById('searchInput').value;
+    const params = new URLSearchParams();
+    if (role) params.set('role', role);
+    if (search) params.set('search', search);
+
+    try {
+      allUsers = await apiFetch(`/users?${params.toString()}`);
+      renderUsers();
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  }
+
+  function renderUsers() {
+    const tbody = document.getElementById('usersTable');
+    if (allUsers.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-muted">No accounts found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = allUsers.map((u) => `
+      <tr>
+        <td><strong>${escapeHtml(u.name)}</strong></td>
+        <td>${escapeHtml(u.username)}</td>
+        <td><span class="badge badge-info">${escapeHtml(u.role)}</span></td>
+        <td>${escapeHtml(u.department || '—')}</td>
+        <td>${escapeHtml(u.supervisor_name || '—')}</td>
+        <td><span class="badge ${statusBadgeClass(u.status)}">${escapeHtml(u.status)}</span></td>
+        <td style="text-align:right; white-space:nowrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openEditModal(${u.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="openDeleteModal(${u.id})">Delete</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function toggleFieldsForRole() {
+    const role = document.getElementById('f_role').value;
+    document.getElementById('supervisorField').style.display = role === 'Trainee' ? 'block' : 'none';
+    document.getElementById('gemLinkField').style.display = role === 'Trainee' ? 'block' : 'none';
+    document.getElementById('learningStyleField').style.display = role === 'Trainee' ? 'block' : 'none';
+  }
+  document.getElementById('f_role').addEventListener('change', toggleFieldsForRole);
+
+  function openCreateModal() {
+    document.getElementById('modalTitle').textContent = 'New Account';
+    document.getElementById('accountForm').reset();
+    document.getElementById('editUserId').value = '';
+    document.getElementById('passwordLabel').textContent = 'Password';
+    document.getElementById('f_password').required = true;
+    document.getElementById('passwordHint').textContent = 'Minimum 8 characters.';
+    document.getElementById('statusField').style.display = 'none';
+    document.getElementById('modalAlert').classList.add('hidden');
+    toggleFieldsForRole();
+    document.getElementById('accountModal').classList.remove('hidden');
+  }
+
+  window.openEditModal = function (id) {
+    const u = allUsers.find((x) => x.id === id);
+    if (!u) return;
+    document.getElementById('modalTitle').textContent = 'Edit Account';
+    document.getElementById('editUserId').value = u.id;
+    document.getElementById('f_name').value = u.name;
+    document.getElementById('f_username').value = u.username;
+    document.getElementById('f_role').value = u.role;
+    document.getElementById('f_department').value = u.department || '';
+    document.getElementById('f_supervisor_id').value = u.supervisor_id || '';
+    document.getElementById('f_learning_style').value = u.learning_style || 'Not Assessed';
+    document.getElementById('f_gem_link').value = u.gem_link || '';
+    document.getElementById('f_status').value = u.status;
+    document.getElementById('f_password').required = false;
+    document.getElementById('passwordLabel').textContent = 'Password';
+    document.getElementById('passwordHint').textContent = 'Leave blank to keep the current password.';
+    document.getElementById('statusField').style.display = 'block';
+    document.getElementById('modalAlert').classList.add('hidden');
+    toggleFieldsForRole();
+    document.getElementById('accountModal').classList.remove('hidden');
+  };
+
+  window.openDeleteModal = function (id) {
+    pendingDeleteId = id;
+    document.getElementById('deleteModal').classList.remove('hidden');
+  };
+
+  document.getElementById('newAccountBtn').addEventListener('click', openCreateModal);
+  document.getElementById('closeModalBtn').addEventListener('click', () => document.getElementById('accountModal').classList.add('hidden'));
+  document.getElementById('cancelBtn').addEventListener('click', () => document.getElementById('accountModal').classList.add('hidden'));
+  document.getElementById('cancelDeleteBtn').addEventListener('click', () => document.getElementById('deleteModal').classList.add('hidden'));
+
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    try {
+      await apiFetch(`/users/${pendingDeleteId}`, { method: 'DELETE' });
+      document.getElementById('deleteModal').classList.add('hidden');
+      loadUsers();
+    } catch (err) {
+      document.getElementById('deleteModal').classList.add('hidden');
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  });
+
+  document.getElementById('accountForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editUserId').value;
+    const payload = {
+      name: document.getElementById('f_name').value.trim(),
+      username: document.getElementById('f_username').value.trim(),
+      role: document.getElementById('f_role').value,
+      department: document.getElementById('f_department').value.trim(),
+      supervisor_id: document.getElementById('f_supervisor_id').value || null,
+      learning_style: document.getElementById('f_learning_style').value,
+      gem_link: document.getElementById('f_gem_link').value.trim(),
+      status: document.getElementById('f_status').value
+    };
+    const password = document.getElementById('f_password').value;
+    if (password) payload.password = password;
+
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+      if (id) {
+        await apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      } else {
+        if (!password) throw new Error('Password is required for a new account.');
+        await apiFetch('/users', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      document.getElementById('accountModal').classList.add('hidden');
+      loadUsers();
+    } catch (err) {
+      showAlert(document.getElementById('modalAlert'), err.message);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Account';
+    }
+  });
+
+  document.getElementById('searchInput').addEventListener('input', debounce(loadUsers, 300));
+  document.getElementById('roleFilter').addEventListener('change', loadUsers);
+
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+
+  loadSupervisors();
+  loadUsers();
+</script>
+</body>
+</html>

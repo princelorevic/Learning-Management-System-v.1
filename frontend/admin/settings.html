@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="../assets/images/logo.png" alt="" class="brand-logo-slot" onerror="this.style.display='none'">
+      <span class="brand-name-slot">Enterprise LMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+      <a href="accounts.html" class="nav-link">👤 Accounts</a>
+      <a href="trainings.html" class="nav-link">📚 Trainings</a>
+      <a href="reports.html" class="nav-link">📈 Reports</a>
+      <a href="settings.html" class="nav-link active">⚙️ Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip"><span class="u-name" id="currentUserName"></span><span class="u-role" id="currentUserRole"></span></div>
+      <button class="btn-logout" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>Settings</h1><p class="text-muted">Branding and AI mentor configuration</p></div>
+    </header>
+    <section class="content">
+      <div id="alertBox" class="hidden"></div>
+
+      <div class="card mb-24">
+        <h2 class="mb-16">Branding</h2>
+        <p class="text-muted mb-16">To fully swap the logo image, replace <code>frontend/assets/images/logo.png</code> before deploying. Or link a hosted image below.</p>
+        <form id="brandForm">
+          <div class="form-group"><label>Company name</label><input type="text" id="b_name" placeholder="Your Company"></div>
+          <div class="form-group"><label>Logo URL (optional)</label><input type="text" id="b_logo" placeholder="https://..."></div>
+          <div class="form-group"><label>Primary color</label><input type="text" id="b_color" placeholder="#2563eb"></div>
+          <button type="submit" class="btn btn-primary">Save Branding</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 class="mb-8">AI Mentor</h2>
+        <p class="text-muted mb-16">These instructions apply to every trainee's AI mentor.</p>
+
+        <div class="form-group">
+          <label>Mode</label>
+          <select id="a_mode">
+            <option value="gem_link">Manual Gemini Gem links (free — you create a Gem in Gemini by hand for each trainee, then paste its link on their account)</option>
+            <option value="api_chat">Live in-app chat (uses the Gemini API with your own key — usage-based cost)</option>
+          </select>
+        </div>
+
+        <div id="apiChatNote" class="alert alert-success hidden" style="margin-bottom:16px;">
+          Set <code>GEMINI_API_KEY</code> in the backend's <code>.env</code> file for this mode to work.
+        </div>
+        <div id="gemLinkNote" class="alert alert-success hidden" style="margin-bottom:16px;">
+          Create each trainee's Gem in Gemini using the prompt below as its instructions, then paste the resulting share link on their account in <a href="accounts.html">Accounts</a>.
+        </div>
+
+        <form id="aiForm">
+          <div class="form-group"><label>Mentor display name</label><input type="text" id="a_mentor_name"></div>
+          <div class="form-group">
+            <label>Instructions (system prompt)</label>
+            <textarea id="a_prompt" rows="6" placeholder="e.g. You are a patient, encouraging corporate trainer. Explain concepts simply, check for understanding, and never invent company policy."></textarea>
+          </div>
+          <div class="form-group" id="modelField">
+            <label>Gemini model</label>
+            <input type="text" id="a_model" placeholder="gemini-flash-latest">
+          </div>
+          <button type="submit" class="btn btn-primary">Save AI Mentor Settings</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script>
+  requireAuth(['Admin']);
+
+  async function loadSettings() {
+    try {
+      const s = await apiFetch('/settings');
+      document.getElementById('b_name').value = s.company_name || '';
+      document.getElementById('b_logo').value = s.logo_url || '';
+      document.getElementById('b_color').value = s.primary_color || '';
+
+      const ai = await apiFetch('/ai/settings');
+      document.getElementById('a_mode').value = ai.mode || 'gem_link';
+      document.getElementById('a_mentor_name').value = ai.mentor_name || 'AI Learning Mentor';
+      document.getElementById('a_prompt').value = ai.system_prompt || '';
+      document.getElementById('a_model').value = ai.model || 'gemini-flash-latest';
+      toggleModeNotes();
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  }
+
+  function toggleModeNotes() {
+    const mode = document.getElementById('a_mode').value;
+    document.getElementById('apiChatNote').classList.toggle('hidden', mode !== 'api_chat');
+    document.getElementById('gemLinkNote').classList.toggle('hidden', mode !== 'gem_link');
+    document.getElementById('modelField').classList.toggle('hidden', mode !== 'api_chat');
+  }
+  document.getElementById('a_mode').addEventListener('change', toggleModeNotes);
+
+  document.getElementById('brandForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/settings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          company_name: document.getElementById('b_name').value.trim(),
+          logo_url: document.getElementById('b_logo').value.trim(),
+          primary_color: document.getElementById('b_color').value.trim()
+        })
+      });
+      showAlert(document.getElementById('alertBox'), 'Branding saved.', 'success');
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  });
+
+  document.getElementById('aiForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/ai/settings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          mode: document.getElementById('a_mode').value,
+          mentor_name: document.getElementById('a_mentor_name').value.trim(),
+          system_prompt: document.getElementById('a_prompt').value.trim(),
+          model: document.getElementById('a_model').value.trim()
+        })
+      });
+      showAlert(document.getElementById('alertBox'), 'AI mentor settings saved.', 'success');
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  });
+
+  loadSettings();
+</script>
+</body>
+</html>

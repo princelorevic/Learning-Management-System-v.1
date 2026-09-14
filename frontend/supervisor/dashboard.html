@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="../assets/images/logo.png" alt="" class="brand-logo-slot" onerror="this.style.display='none'">
+      <span class="brand-name-slot">Enterprise LMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-link active">📊 Dashboard</a>
+      <a href="my-team.html" class="nav-link">👥 My Team</a>
+      <a href="trainings.html" class="nav-link">📚 Trainings</a>
+      <a href="reports.html" class="nav-link">📈 Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip"><span class="u-name" id="currentUserName"></span><span class="u-role" id="currentUserRole"></span></div>
+      <button class="btn-logout" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>Dashboard</h1><p class="text-muted">Your team at a glance</p></div>
+    </header>
+    <section class="content">
+      <div id="alertBox" class="hidden"></div>
+      <div class="stat-grid" id="statGrid">
+        <div class="stat-card"><div class="stat-label">Loading…</div></div>
+      </div>
+
+      <div class="card">
+        <div class="flex-between mb-16"><h2>My team</h2><a href="my-team.html" class="btn btn-secondary btn-sm">View all</a></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Department</th><th>Enrolled</th><th>Completed</th></tr></thead>
+            <tbody id="teamTable"><tr><td colspan="4" class="text-muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script>
+  requireAuth(['Supervisor']);
+
+  async function loadDashboard() {
+    try {
+      const d = await apiFetch('/dashboard/supervisor');
+      document.getElementById('statGrid').innerHTML = `
+        <div class="stat-card"><div class="stat-label">Active Trainees</div><div class="stat-value">${d.active_trainees}</div></div>
+        <div class="stat-card"><div class="stat-label">Ongoing Trainings</div><div class="stat-value">${d.ongoing_trainings}</div></div>
+        <div class="stat-card"><div class="stat-label">Completed Trainings</div><div class="stat-value">${d.completed_trainings}</div></div>
+        <div class="stat-card"><div class="stat-label">Trainings You Conduct</div><div class="stat-value">${d.trainings_conducted}</div></div>
+      `;
+      document.getElementById('teamTable').innerHTML = d.team.length
+        ? d.team.slice(0, 8).map((t) => `
+            <tr><td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.department || '—')}</td><td>${t.enrolled_count}</td><td>${t.completed_count}</td></tr>`).join('')
+        : '<tr><td colspan="4" class="text-muted">No trainees assigned to you yet.</td></tr>';
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  }
+  loadDashboard();
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="../assets/images/logo.png" alt="" class="brand-logo-slot" onerror="this.style.display='none'">
+      <span class="brand-name-slot">Enterprise LMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-link active">📊 Dashboard</a>
+      <a href="accounts.html" class="nav-link">👤 Accounts</a>
+      <a href="trainings.html" class="nav-link">📚 Trainings</a>
+      <a href="reports.html" class="nav-link">📈 Reports</a>
+      <a href="settings.html" class="nav-link">⚙️ Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip"><span class="u-name" id="currentUserName"></span><span class="u-role" id="currentUserRole"></span></div>
+      <button class="btn-logout" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>Dashboard</h1><p class="text-muted">Organization-wide training overview</p></div>
+    </header>
+    <section class="content">
+      <div id="alertBox" class="hidden"></div>
+
+      <div class="stat-grid" id="statGrid">
+        <div class="stat-card"><div class="stat-label">Loading…</div></div>
+      </div>
+
+      <div class="card mb-24">
+        <div class="flex-between mb-16"><h2>Enrollment status breakdown</h2></div>
+        <div id="statusBreakdown"><p class="text-muted">Loading…</p></div>
+      </div>
+
+      <div class="card">
+        <div class="flex-between mb-16"><h2>Recent enrollments</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Trainee</th><th>Training</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody id="recentTable"><tr><td colspan="4" class="text-muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script>
+  requireAuth(['Admin']);
+
+  async function loadDashboard() {
+    try {
+      const d = await apiFetch('/dashboard/admin');
+
+      document.getElementById('statGrid').innerHTML = `
+        <div class="stat-card"><div class="stat-label">Total Accounts</div><div class="stat-value">${d.total_accounts}</div><div class="stat-sub">${d.total_trainees} trainees · ${d.total_supervisors} supervisors</div></div>
+        <div class="stat-card"><div class="stat-label">Total Trainings</div><div class="stat-value">${d.total_trainings}</div><div class="stat-sub">${d.published_trainings} published</div></div>
+        <div class="stat-card"><div class="stat-label">Total Enrollments</div><div class="stat-value">${d.total_enrollments}</div><div class="stat-sub">${d.completed_enrollments} completed</div></div>
+        <div class="stat-card"><div class="stat-label">Completion Rate</div><div class="stat-value">${d.completion_rate}%</div><div class="stat-sub">across all trainees</div></div>
+      `;
+
+      const total = d.status_breakdown.reduce((sum, s) => sum + s.count, 0) || 1;
+      document.getElementById('statusBreakdown').innerHTML = d.status_breakdown.length
+        ? d.status_breakdown.map((s) => {
+            const pct = Math.round((s.count / total) * 100);
+            return `<div class="mb-16">
+              <div class="flex-between" style="margin-bottom:6px;"><span>${escapeHtml(s.status)}</span><span class="text-muted">${s.count} (${pct}%)</span></div>
+              <div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>
+            </div>`;
+          }).join('')
+        : '<p class="text-muted">No enrollments yet.</p>';
+
+      document.getElementById('recentTable').innerHTML = d.recent_enrollments.length
+        ? d.recent_enrollments.map((r) => `
+            <tr>
+              <td>${escapeHtml(r.trainee_name)}</td>
+              <td>${escapeHtml(r.course_title)}</td>
+              <td><span class="badge ${statusBadgeClass(r.status)}">${escapeHtml(r.status)}</span></td>
+              <td>${formatDate(r.enrolled_at)}</td>
+            </tr>`).join('')
+        : '<tr><td colspan="4" class="text-muted">No enrollments yet.</td></tr>';
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

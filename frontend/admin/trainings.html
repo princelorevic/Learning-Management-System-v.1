@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trainings — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="../assets/images/logo.png" alt="" class="brand-logo-slot" onerror="this.style.display='none'">
+      <span class="brand-name-slot">Enterprise LMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+      <a href="accounts.html" class="nav-link">👤 Accounts</a>
+      <a href="trainings.html" class="nav-link active">📚 Trainings</a>
+      <a href="reports.html" class="nav-link">📈 Reports</a>
+      <a href="settings.html" class="nav-link">⚙️ Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip"><span class="u-name" id="currentUserName"></span><span class="u-role" id="currentUserRole"></span></div>
+      <button class="btn-logout" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>Trainings</h1><p class="text-muted">Create trainings and manage who delivers and takes them</p></div>
+      <button class="btn btn-primary" id="newCourseBtn">+ New Training</button>
+    </header>
+    <section class="content">
+      <div id="alertBox" class="hidden"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Title</th><th>Department</th><th>Status</th><th>Duration</th><th>Enrolled</th><th>Completed</th><th></th></tr></thead>
+          <tbody id="coursesTable"><tr><td colspan="7" class="text-muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Create/Edit training modal -->
+<div class="modal-backdrop hidden" id="courseModal">
+  <div class="modal">
+    <div class="modal-header"><h2 id="courseModalTitle">New Training</h2><button class="modal-close" id="closeCourseModal">&times;</button></div>
+    <div id="courseModalAlert" class="hidden"></div>
+    <form id="courseForm">
+      <input type="hidden" id="c_id">
+      <div class="form-group"><label>Title</label><input type="text" id="c_title" required></div>
+      <div class="form-group"><label>Description</label><textarea id="c_description"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Department (or "ALL")</label><input type="text" id="c_department" value="ALL"></div>
+        <div class="form-group"><label>Duration (hours)</label><input type="number" step="0.5" min="0" id="c_duration" value="1"></div>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="c_status"><option value="Draft">Draft</option><option value="Published">Published</option><option value="Archived">Archived</option></select>
+      </div>
+      <div class="flex-between mt-24">
+        <button type="button" class="btn btn-secondary" id="cancelCourseBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveCourseBtn">Save Training</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Manage training modal (modules, facilitators, enrollment) -->
+<div class="modal-backdrop hidden" id="manageModal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header"><h2 id="manageTitle">Manage Training</h2><button class="modal-close" id="closeManageModal">&times;</button></div>
+    <div id="manageAlert" class="hidden"></div>
+
+    <h3 class="mb-16">Modules</h3>
+    <div id="modulesList" class="mb-16"></div>
+    <form id="moduleForm" class="form-row" style="align-items:end; margin-bottom:24px;">
+      <div class="form-group" style="margin-bottom:0;"><label>New module title</label><input type="text" id="m_title" required></div>
+      <button type="submit" class="btn btn-secondary">+ Add</button>
+    </form>
+
+    <h3 class="mb-16">Supervisors who can conduct this training</h3>
+    <div id="facilitatorsList" class="mb-16"></div>
+    <form id="facilitatorForm" class="form-row" style="align-items:end; margin-bottom:24px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Assign supervisor</label>
+        <select id="f_supervisor_select"></select>
+      </div>
+      <button type="submit" class="btn btn-secondary">+ Assign</button>
+    </form>
+
+    <h3 class="mb-16">Enrolled trainees</h3>
+    <div id="enrollmentsList" class="mb-16"></div>
+    <form id="enrollForm" class="form-row" style="align-items:end;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Enroll trainee</label>
+        <select id="e_trainee_select"></select>
+      </div>
+      <button type="submit" class="btn btn-secondary">+ Enroll</button>
+    </form>
+  </div>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script>
+  requireAuth(['Admin']);
+
+  let courses = [];
+  let allSupervisors = [];
+  let allTrainees = [];
+  let activeCourseId = null;
+
+  async function loadCourses() {
+    try {
+      courses = await apiFetch('/courses');
+      renderCourses();
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  }
+
+  function renderCourses() {
+    const tbody = document.getElementById('coursesTable');
+    if (courses.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-muted">No trainings yet. Create your first one.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = courses.map((c) => `
+      <tr>
+        <td><strong>${escapeHtml(c.title)}</strong></td>
+        <td>${escapeHtml(c.department_target)}</td>
+        <td><span class="badge ${statusBadgeClass(c.status)}">${escapeHtml(c.status)}</span></td>
+        <td>${c.duration_hours} hrs</td>
+        <td>${c.enrolled_count}</td>
+        <td>${c.completed_count}</td>
+        <td style="text-align:right; white-space:nowrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openManageModal(${c.course_id})">Manage</button>
+          <button class="btn btn-secondary btn-sm" onclick="openEditCourse(${c.course_id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteCourse(${c.course_id})">Delete</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  document.getElementById('newCourseBtn').addEventListener('click', () => {
+    document.getElementById('courseModalTitle').textContent = 'New Training';
+    document.getElementById('courseForm').reset();
+    document.getElementById('c_id').value = '';
+    document.getElementById('c_department').value = 'ALL';
+    document.getElementById('c_duration').value = 1;
+    document.getElementById('courseModalAlert').classList.add('hidden');
+    document.getElementById('courseModal').classList.remove('hidden');
+  });
+
+  window.openEditCourse = function (id) {
+    const c = courses.find((x) => x.course_id === id);
+    if (!c) return;
+    document.getElementById('courseModalTitle').textContent = 'Edit Training';
+    document.getElementById('c_id').value = c.course_id;
+    document.getElementById('c_title').value = c.title;
+    document.getElementById('c_description').value = c.description || '';
+    document.getElementById('c_department').value = c.department_target;
+    document.getElementById('c_duration').value = c.duration_hours;
+    document.getElementById('c_status').value = c.status;
+    document.getElementById('courseModalAlert').classList.add('hidden');
+    document.getElementById('courseModal').classList.remove('hidden');
+  };
+
+  window.deleteCourse = async function (id) {
+    if (!confirm('Delete this training? This also removes its enrollments.')) return;
+    try {
+      await apiFetch(`/courses/${id}`, { method: 'DELETE' });
+      loadCourses();
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  };
+
+  document.getElementById('closeCourseModal').addEventListener('click', () => document.getElementById('courseModal').classList.add('hidden'));
+  document.getElementById('cancelCourseBtn').addEventListener('click', () => document.getElementById('courseModal').classList.add('hidden'));
+
+  document.getElementById('courseForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('c_id').value;
+    const payload = {
+      title: document.getElementById('c_title').value.trim(),
+      description: document.getElementById('c_description').value.trim(),
+      department_target: document.getElementById('c_department').value.trim() || 'ALL',
+      duration_hours: parseFloat(document.getElementById('c_duration').value) || 0,
+      status: document.getElementById('c_status').value
+    };
+    try {
+      if (id) await apiFetch(`/courses/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      else await apiFetch('/courses', { method: 'POST', body: JSON.stringify(payload) });
+      document.getElementById('courseModal').classList.add('hidden');
+      loadCourses();
+    } catch (err) {
+      showAlert(document.getElementById('courseModalAlert'), err.message);
+    }
+  });
+
+  // ---------------- Manage modal ----------------
+  window.openManageModal = async function (id) {
+    activeCourseId = id;
+    const c = courses.find((x) => x.course_id === id);
+    document.getElementById('manageTitle').textContent = `Manage: ${c.title}`;
+    document.getElementById('manageModal').classList.remove('hidden');
+    await Promise.all([loadDetail(id), loadDropdowns(id)]);
+  };
+  document.getElementById('closeManageModal').addEventListener('click', () => document.getElementById('manageModal').classList.add('hidden'));
+
+  async function loadDetail(id) {
+    const detail = await apiFetch(`/courses/${id}`);
+    document.getElementById('modulesList').innerHTML = detail.modules.length
+      ? detail.modules.map((m) => `
+          <div class="flex-between" style="padding:10px 0; border-bottom:1px solid var(--border);">
+            <span>${escapeHtml(m.title)}</span>
+            <button class="btn btn-danger btn-sm" onclick="deleteModule(${id}, ${m.module_id})">Remove</button>
+          </div>`).join('')
+      : '<p class="text-muted">No modules yet.</p>';
+
+    document.getElementById('facilitatorsList').innerHTML = detail.facilitators.length
+      ? detail.facilitators.map((f) => `
+          <div class="flex-between" style="padding:10px 0; border-bottom:1px solid var(--border);">
+            <span>${escapeHtml(f.name)}</span>
+            <button class="btn btn-danger btn-sm" onclick="removeFacilitator(${id}, ${f.id})">Remove</button>
+          </div>`).join('')
+      : '<p class="text-muted">No supervisors assigned yet.</p>';
+
+    const enrollments = await apiFetch(`/courses/${id}/enrollments`);
+    document.getElementById('enrollmentsList').innerHTML = enrollments.length
+      ? enrollments.map((e) => `
+          <div class="flex-between" style="padding:10px 0; border-bottom:1px solid var(--border);">
+            <span>${escapeHtml(e.name)} — <span class="badge ${statusBadgeClass(e.status)}">${escapeHtml(e.status)}</span> (${e.progress}%)</span>
+            <button class="btn btn-danger btn-sm" onclick="removeEnrollment(${id}, ${e.user_id})">Remove</button>
+          </div>`).join('')
+      : '<p class="text-muted">No trainees enrolled yet.</p>';
+  }
+
+  async function loadDropdowns(courseId) {
+    if (allSupervisors.length === 0) allSupervisors = await apiFetch('/users?role=Supervisor');
+    if (allTrainees.length === 0) allTrainees = await apiFetch('/users?role=Trainee');
+    document.getElementById('f_supervisor_select').innerHTML = allSupervisors.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('') || '<option value="">No supervisors yet</option>';
+    document.getElementById('e_trainee_select').innerHTML = allTrainees.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('') || '<option value="">No trainees yet</option>';
+  }
+
+  window.deleteModule = async function (courseId, moduleId) {
+    await apiFetch(`/courses/${courseId}/modules/${moduleId}`, { method: 'DELETE' });
+    loadDetail(courseId);
+  };
+  window.removeFacilitator = async function (courseId, supervisorId) {
+    await apiFetch(`/courses/${courseId}/facilitators/${supervisorId}`, { method: 'DELETE' });
+    loadDetail(courseId);
+  };
+  window.removeEnrollment = async function (courseId, userId) {
+    await apiFetch(`/courses/${courseId}/enroll/${userId}`, { method: 'DELETE' });
+    loadDetail(courseId);
+    loadCourses();
+  };
+
+  document.getElementById('moduleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('m_title').value.trim();
+    if (!title) return;
+    try {
+      await apiFetch(`/courses/${activeCourseId}/modules`, { method: 'POST', body: JSON.stringify({ title }) });
+      document.getElementById('m_title').value = '';
+      loadDetail(activeCourseId);
+    } catch (err) { showAlert(document.getElementById('manageAlert'), err.message); }
+  });
+
+  document.getElementById('facilitatorForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const supervisor_id = document.getElementById('f_supervisor_select').value;
+    if (!supervisor_id) return;
+    try {
+      await apiFetch(`/courses/${activeCourseId}/facilitators`, { method: 'POST', body: JSON.stringify({ supervisor_id }) });
+      loadDetail(activeCourseId);
+    } catch (err) { showAlert(document.getElementById('manageAlert'), err.message); }
+  });
+
+  document.getElementById('enrollForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const user_id = document.getElementById('e_trainee_select').value;
+    if (!user_id) return;
+    try {
+      await apiFetch(`/courses/${activeCourseId}/enroll`, { method: 'POST', body: JSON.stringify({ user_id }) });
+      loadDetail(activeCourseId);
+      loadCourses();
+    } catch (err) { showAlert(document.getElementById('manageAlert'), err.message); }
+  });
+
+  loadCourses();
+</script>
+</body>
+</html>

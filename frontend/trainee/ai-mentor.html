@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Mentor — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<style>
+  .mentor-wrap { height: calc(100vh - 140px); display: flex; flex-direction: column; }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="../assets/images/logo.png" alt="" class="brand-logo-slot" onerror="this.style.display='none'">
+      <span class="brand-name-slot">Enterprise LMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+      <a href="courses.html" class="nav-link">📚 My Courses</a>
+      <a href="ai-mentor.html" class="nav-link active">🤖 AI Mentor</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip"><span class="u-name" id="currentUserName"></span><span class="u-role" id="currentUserRole"></span></div>
+      <button class="btn-logout" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1 id="mentorTitle">AI Mentor</h1><p class="text-muted">Your personal learning assistant</p></div>
+    </header>
+    <section class="content">
+      <div id="alertBox" class="hidden"></div>
+      <div id="mentorArea"><p class="text-muted">Loading…</p></div>
+    </section>
+  </main>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script>
+  requireAuth(['Trainee']);
+
+  async function init() {
+    try {
+      const info = await apiFetch('/ai/mentor-info');
+      document.getElementById('mentorTitle').textContent = info.mentor_name || 'AI Mentor';
+
+      if (info.mode === 'gem_link') {
+        renderGemLinkMode(info);
+      } else {
+        await renderChatMode();
+      }
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  }
+
+  function renderGemLinkMode(info) {
+    const area = document.getElementById('mentorArea');
+    if (info.gem_link) {
+      area.innerHTML = `
+        <div class="card" style="max-width:480px;">
+          <h3 class="mb-8">${escapeHtml(info.mentor_name)} is ready</h3>
+          <p class="text-muted mb-16">Your personal AI mentor was set up for you in Gemini. Open it any time to ask questions and get guidance.</p>
+          <a href="${escapeHtml(info.gem_link)}" target="_blank" rel="noopener" class="btn btn-primary">Open My AI Mentor ↗</a>
+        </div>`;
+    } else {
+      area.innerHTML = `
+        <div class="card" style="max-width:480px;">
+          <h3 class="mb-8">Not set up yet</h3>
+          <p class="text-muted">Your admin hasn't linked your personal AI mentor yet. Check back soon, or ask your supervisor.</p>
+        </div>`;
+    }
+  }
+
+  async function renderChatMode() {
+    const area = document.getElementById('mentorArea');
+    area.innerHTML = `
+      <div class="mentor-wrap">
+        <div class="chat-window">
+          <div class="chat-messages" id="chatMessages"></div>
+          <form class="chat-input-row" id="chatForm">
+            <textarea id="chatInput" placeholder="Ask your AI mentor anything about your training..." required></textarea>
+            <button type="submit" class="btn btn-primary" id="sendBtn">Send</button>
+          </form>
+        </div>
+      </div>`;
+
+    const messagesEl = document.getElementById('chatMessages');
+
+    function addBubble(sender, text) {
+      const bubble = document.createElement('div');
+      bubble.className = `chat-bubble ${sender === 'ai' ? 'ai' : 'user'}`;
+      bubble.textContent = text;
+      messagesEl.appendChild(bubble);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return bubble;
+    }
+
+    try {
+      const history = await apiFetch('/ai/history');
+      if (history.messages.length === 0) {
+        addBubble('ai', "Hi! I'm your AI learning mentor. Ask me anything about your trainings.");
+      } else {
+        history.messages.forEach((m) => addBubble(m.sender, m.content));
+      }
+    } catch (err) {
+      addBubble('ai', 'Could not load your conversation history.');
+    }
+
+    document.getElementById('chatForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('chatInput');
+      const message = input.value.trim();
+      if (!message) return;
+
+      addBubble('user', message);
+      input.value = '';
+      const sendBtn = document.getElementById('sendBtn');
+      sendBtn.disabled = true;
+
+      const typing = document.createElement('div');
+      typing.className = 'chat-typing';
+      typing.textContent = 'Mentor is typing…';
+      messagesEl.appendChild(typing);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      try {
+        const res = await apiFetch('/ai/chat', { method: 'POST', body: JSON.stringify({ message }) });
+        typing.remove();
+        addBubble('ai', res.reply);
+      } catch (err) {
+        typing.remove();
+        addBubble('ai', `⚠️ ${err.message}`);
+      } finally {
+        sendBtn.disabled = false;
+      }
+    });
+  }
+
+  init();
+</script>
+</body>
+</html>

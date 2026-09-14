@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trainings — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="../assets/images/logo.png" alt="" class="brand-logo-slot" onerror="this.style.display='none'">
+      <span class="brand-name-slot">Enterprise LMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+      <a href="my-team.html" class="nav-link">👥 My Team</a>
+      <a href="trainings.html" class="nav-link active">📚 Trainings</a>
+      <a href="reports.html" class="nav-link">📈 Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip"><span class="u-name" id="currentUserName"></span><span class="u-role" id="currentUserRole"></span></div>
+      <button class="btn-logout" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>Trainings</h1><p class="text-muted">Trainings you can conduct and enroll your team into</p></div>
+    </header>
+    <section class="content">
+      <div id="alertBox" class="hidden"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Title</th><th>Department</th><th>Status</th><th>Duration</th><th></th></tr></thead>
+          <tbody id="coursesTable"><tr><td colspan="5" class="text-muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop hidden" id="manageModal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header"><h2 id="manageTitle">Training</h2><button class="modal-close" id="closeManageModal">&times;</button></div>
+    <div id="manageAlert" class="hidden"></div>
+
+    <h3 class="mb-16">Content</h3>
+    <div id="modulesList" class="mb-24"></div>
+
+    <h3 class="mb-16">My team's enrollment</h3>
+    <div id="enrollmentsList" class="mb-16"></div>
+    <form id="enrollForm" class="form-row" style="align-items:end;">
+      <div class="form-group" style="margin-bottom:0;"><label>Enroll a trainee from my team</label><select id="e_trainee_select"></select></div>
+      <button type="submit" class="btn btn-secondary">+ Enroll</button>
+    </form>
+  </div>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script>
+  requireAuth(['Supervisor']);
+
+  let courses = [];
+  let myTeam = [];
+  let activeCourseId = null;
+
+  async function loadCourses() {
+    try {
+      courses = await apiFetch('/courses');
+      renderCourses();
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  }
+
+  function renderCourses() {
+    const tbody = document.getElementById('coursesTable');
+    tbody.innerHTML = courses.length ? courses.map((c) => `
+      <tr>
+        <td><strong>${escapeHtml(c.title)}</strong></td>
+        <td>${escapeHtml(c.department_target)}</td>
+        <td><span class="badge ${statusBadgeClass(c.status)}">${escapeHtml(c.status)}</span></td>
+        <td>${c.duration_hours} hrs</td>
+        <td style="text-align:right;"><button class="btn btn-secondary btn-sm" onclick="openManage(${c.course_id})">Open</button></td>
+      </tr>`).join('') : '<tr><td colspan="5" class="text-muted">No trainings available yet.</td></tr>';
+  }
+
+  window.openManage = async function (id) {
+    activeCourseId = id;
+    const c = courses.find((x) => x.course_id === id);
+    document.getElementById('manageTitle').textContent = c.title;
+    document.getElementById('manageModal').classList.remove('hidden');
+    if (myTeam.length === 0) {
+      const d = await apiFetch('/dashboard/supervisor');
+      myTeam = d.team;
+    }
+    document.getElementById('e_trainee_select').innerHTML = myTeam.length
+      ? myTeam.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')
+      : '<option value="">No one on your team yet</option>';
+    await refreshDetail();
+  };
+  document.getElementById('closeManageModal').addEventListener('click', () => document.getElementById('manageModal').classList.add('hidden'));
+
+  async function refreshDetail() {
+    const detail = await apiFetch(`/courses/${activeCourseId}`);
+    document.getElementById('modulesList').innerHTML = detail.modules.length
+      ? detail.modules.map((m) => `<div class="mb-16"><strong>${escapeHtml(m.title)}</strong><p class="text-muted">${escapeHtml(m.content || 'No description provided.')}</p></div>`).join('')
+      : '<p class="text-muted">No content added yet — ask your admin to add modules.</p>';
+
+    const enrollments = await apiFetch(`/courses/${activeCourseId}/enrollments`);
+    const myTeamIds = myTeam.map((t) => t.id);
+    const myEnrollments = enrollments.filter((e) => myTeamIds.includes(e.user_id));
+
+    document.getElementById('enrollmentsList').innerHTML = myEnrollments.length
+      ? myEnrollments.map((e) => `
+          <div class="flex-between mb-16">
+            <div>
+              <div>${escapeHtml(e.name)} <span class="badge ${statusBadgeClass(e.status)}">${escapeHtml(e.status)}</span></div>
+              <div class="progress-track mt-8" style="width:180px;"><div class="progress-fill" style="width:${e.progress}%;"></div></div>
+            </div>
+            <div>
+              <input type="number" min="0" max="100" value="${e.progress}" style="width:70px; display:inline-block;" id="progress-${e.user_id}">
+              <button class="btn btn-secondary btn-sm" onclick="updateProgress(${e.user_id})">Update</button>
+            </div>
+          </div>`).join('')
+      : '<p class="text-muted">None of your team is enrolled in this training yet.</p>';
+  }
+
+  window.updateProgress = async function (userId) {
+    const progress = document.getElementById(`progress-${userId}`).value;
+    try {
+      await apiFetch(`/courses/${activeCourseId}/enroll/${userId}`, { method: 'PUT', body: JSON.stringify({ progress: Number(progress) }) });
+      refreshDetail();
+    } catch (err) {
+      showAlert(document.getElementById('manageAlert'), err.message);
+    }
+  };
+
+  document.getElementById('enrollForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const user_id = document.getElementById('e_trainee_select').value;
+    if (!user_id) return;
+    try {
+      await apiFetch(`/courses/${activeCourseId}/enroll`, { method: 'POST', body: JSON.stringify({ user_id }) });
+      refreshDetail();
+    } catch (err) {
+      showAlert(document.getElementById('manageAlert'), err.message);
+    }
+  });
+
+  loadCourses();
+</script>
+</body>
+</html>
