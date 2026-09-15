@@ -104,6 +104,8 @@ router.get('/trainee', verifyToken, requireRole('Trainee'), async (req, res) => 
       [traineeId]
     );
 
+    const [[profile]] = await db.query('SELECT learning_style FROM users WHERE id = ? LIMIT 1', [traineeId]);
+
     const [courses] = await db.query(
       `SELECT c.course_id, c.title, e.status, e.progress
        FROM enrollments e INNER JOIN courses c ON e.course_id = c.course_id
@@ -115,6 +117,7 @@ router.get('/trainee', verifyToken, requireRole('Trainee'), async (req, res) => 
       enrolled: stats.enrolled || 0,
       completed: stats.completed || 0,
       pending: stats.pending || 0,
+      learning_style: profile?.learning_style || 'Not Assessed',
       recent_courses: courses
     });
   } catch (error) {

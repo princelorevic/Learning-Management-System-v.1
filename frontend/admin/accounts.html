@@ -114,7 +114,10 @@
           <option value="Reading/Writing Module">Reading/Writing</option>
           <option value="Kinesthetic Module">Kinesthetic</option>
         </select>
-        <p class="text-muted mt-8" style="font-size:12px;">Used by the AI mentor to adapt how it explains things.</p>
+        <p class="text-muted mt-8" style="font-size:12px;">
+          Used by the AI mentor to adapt how it explains things. Leaving this as "Not Assessed" keeps showing the trainee a reminder to take the assessment.
+          <a href="#" id="viewAssessmentLink" target="_blank" rel="noopener">View the assessment form ↗</a>
+        </p>
       </div>
       <div class="form-group" id="gemLinkField">
         <label>Gemini Gem link (optional)</label>
@@ -308,8 +311,20 @@
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
   }
 
+  async function loadAssessmentLink() {
+    try {
+      const settings = await apiFetch('/settings');
+      if (settings.assessment_form_url) {
+        document.getElementById('viewAssessmentLink').href = settings.assessment_form_url;
+      }
+    } catch {
+      // non-critical
+    }
+  }
+
   loadSupervisors();
   loadUsers();
+  loadAssessmentLink();
 </script>
 </body>
 </html>

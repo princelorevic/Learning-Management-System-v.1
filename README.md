@@ -135,3 +135,9 @@ browser. This version keeps your stack, roles, and visual style, and makes
 all of it real: enforced login + role checks on every route, live Excel
 generation, a working AI mentor (either mode), and full CRUD across accounts,
 trainings, modules, facilitators, and enrollment.
+
+## 10. to run this program 
+
+We need to go to terminal cd backend (`"npm start"`)
+then go to add 1 more terminal and cd front end (`"npx serve -p 5501"`) 
+then go to http://localhost:5501/login.html

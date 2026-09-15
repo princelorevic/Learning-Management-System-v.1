@@ -27,9 +27,9 @@ router.get('/', async (req, res) => {
 // just overwrite frontend/assets/images/logo.png and leave logo_url blank.
 // ============================================================
 router.put('/', verifyToken, requireRole('Admin'), async (req, res) => {
-  const { company_name, logo_url, primary_color } = req.body;
+  const { company_name, logo_url, primary_color, assessment_form_url } = req.body;
 
-  const updates = { company_name, logo_url, primary_color };
+  const updates = { company_name, logo_url, primary_color, assessment_form_url };
 
   try {
     for (const [key, value] of Object.entries(updates)) {

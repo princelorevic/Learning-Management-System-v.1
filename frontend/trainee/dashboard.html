@@ -42,9 +42,36 @@
   </main>
 </div>
 
+<div class="modal-backdrop hidden" id="assessmentModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h2>📋 Learning Style Assessment</h2>
+      <button class="modal-close" id="closeAssessmentModal">&times;</button>
+    </div>
+    <p class="text-muted mb-24">Your admin hasn't recorded your learning style yet. Please take a few minutes to complete the Employee Multiple Intelligences Assessment — your AI mentor uses the result to teach in the way that works best for you.</p>
+    <a href="#" target="_blank" rel="noopener" class="btn btn-primary" id="assessmentLink" style="width:100%; text-align:center;">Take the Assessment ↗</a>
+  </div>
+</div>
+
 <script src="../assets/js/api.js"></script>
 <script>
   requireAuth(['Trainee']);
+
+  async function checkAssessment(learningStyle) {
+    if (learningStyle && learningStyle !== 'Not Assessed') return; // already recorded — nothing to do
+    try {
+      const settings = await apiFetch('/settings');
+      if (settings.assessment_form_url) {
+        document.getElementById('assessmentLink').href = settings.assessment_form_url;
+        document.getElementById('assessmentModal').classList.remove('hidden');
+      }
+    } catch {
+      // Non-critical — just skip the reminder if settings can't be loaded.
+    }
+  }
+  document.getElementById('closeAssessmentModal').addEventListener('click', () =>
+    document.getElementById('assessmentModal').classList.add('hidden')
+  );
 
   async function loadDashboard() {
     try {
@@ -64,6 +91,8 @@
               <div class="progress-track"><div class="progress-fill" style="width:${c.progress}%;"></div></div>
             </div>`).join('')
         : '<p class="text-muted">You are not enrolled in any trainings yet. Check "My Courses" to browse what\'s available.</p>';
+
+      checkAssessment(d.learning_style);
     } catch (err) {
       showAlert(document.getElementById('alertBox'), err.message);
     }

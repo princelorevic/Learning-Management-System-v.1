@@ -44,6 +44,15 @@
         </form>
       </div>
 
+      <div class="card mb-24">
+        <h2 class="mb-8">Learning Style Assessment</h2>
+        <p class="text-muted mb-16">Trainees see a reminder popup on their dashboard, linking to this form, until you set their Learning Style (Admin → Accounts). Setting it — based on their actual assessment result — is what makes the reminder stop.</p>
+        <form id="assessmentForm">
+          <div class="form-group"><label>Google Form link</label><input type="text" id="s_assessment_url" placeholder="https://docs.google.com/forms/..."></div>
+          <button type="submit" class="btn btn-primary">Save Form Link</button>
+        </form>
+      </div>
+
       <div class="card">
         <h2 class="mb-8">AI Mentor</h2>
         <p class="text-muted mb-16">These instructions apply to every trainee's AI mentor.</p>
@@ -90,6 +99,7 @@
       document.getElementById('b_name').value = s.company_name || '';
       document.getElementById('b_logo').value = s.logo_url || '';
       document.getElementById('b_color').value = s.primary_color || '';
+      document.getElementById('s_assessment_url').value = s.assessment_form_url || '';
 
       const ai = await apiFetch('/ai/settings');
       document.getElementById('a_mode').value = ai.mode || 'gem_link';
@@ -122,6 +132,19 @@
         })
       });
       showAlert(document.getElementById('alertBox'), 'Branding saved.', 'success');
+    } catch (err) {
+      showAlert(document.getElementById('alertBox'), err.message);
+    }
+  });
+
+  document.getElementById('assessmentForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ assessment_form_url: document.getElementById('s_assessment_url').value.trim() })
+      });
+      showAlert(document.getElementById('alertBox'), 'Assessment form link saved.', 'success');
     } catch (err) {
       showAlert(document.getElementById('alertBox'), err.message);
     }

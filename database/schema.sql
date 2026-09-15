@@ -167,5 +167,6 @@ INSERT INTO system_settings (setting_key, setting_value)
     SELECT 'company_name' AS setting_key, 'Your Company' AS setting_value
     UNION SELECT 'logo_url', '/assets/images/logo.png'
     UNION SELECT 'primary_color', '#2563eb'
+    UNION SELECT 'assessment_form_url', 'https://docs.google.com/forms/d/e/1FAIpQLScRMwAXGuj1huDPCtiw1PE5g5qpmWcGoquOa46S1iQ1gstTCQ/viewform'
   ) AS seed
   WHERE NOT EXISTS (SELECT 1 FROM system_settings WHERE system_settings.setting_key = seed.setting_key);
