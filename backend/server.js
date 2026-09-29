@@ -29,6 +29,7 @@ app.get('/', (req, res) => {
   res.json({ status: 'success', message: 'Enterprise LMS Backend API', version: '1.0.0' });
 });
 
+app.use('/api/public', require('./routes/public'));
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/users', require('./routes/users.routes'));
 app.use('/api/courses', require('./routes/courses.routes'));
@@ -36,6 +37,7 @@ app.use('/api/dashboard', require('./routes/dashboard.routes'));
 app.use('/api/reports', require('./routes/reports.routes'));
 app.use('/api/ai', require('./routes/ai.routes'));
 app.use('/api/settings', require('./routes/settings.routes'));
+app.use('/api/public', require('./routes/public.routes'));
 
 // ------------------------------------------------------------
 // 404 + error handling

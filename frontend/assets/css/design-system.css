@@ -237,6 +237,6 @@ tbody tr:hover { background: var(--surface-light); }
 .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--background); padding: 20px; }
 .login-card { width: 100%; max-width: 380px; background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 36px 32px; border: 1px solid var(--border); }
 .login-brand { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 24px; text-align: center; }
-.login-brand img { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; }
+.login-brand img { width: 80px; height: 80px; border-radius: 32px; object-fit: cover; }
 .login-brand h1 { font-size: 18px; }
 .login-brand p { font-size: 13px; }
