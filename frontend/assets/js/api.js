@@ -5,7 +5,7 @@
 
 // 👉 Point this at your deployed backend. Left as-is, it assumes
 //    the API runs on the same machine at port 3000 (local dev).
-const API_BASE_URL = window.LMS_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = window.LMS_API_BASE_URL || 'https://learning-management-system-v-1.onrender.com';
 
 // ---------------- Auth storage ----------------
 function getToken() { return localStorage.getItem('lms_token'); }
