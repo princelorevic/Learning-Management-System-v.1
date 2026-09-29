@@ -60,7 +60,7 @@
   async function checkAssessment(learningStyle) {
     if (learningStyle && learningStyle !== 'Not Assessed') return; // already recorded — nothing to do
     try {
-      const settings = await apiFetch('/settings');
+      const settings = await apiFetch('api/settings');
       if (settings.assessment_form_url) {
         document.getElementById('assessmentLink').href = settings.assessment_form_url;
         document.getElementById('assessmentModal').classList.remove('hidden');
