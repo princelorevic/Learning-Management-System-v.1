@@ -44,11 +44,11 @@ async function apiFetch(path, options = {}) {
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 
-  if (response.status === 401) {
-    clearSession();
-    window.location.href = resolvePath('login.html');
-    throw new Error('Session expired.');
-  }
+  if (response.status === 401 && !path.startsWith('/auth/login')) {
+  clearSession();
+  window.location.href = resolvePath('login.html');
+  throw new Error('Session expired.');
+}
 
   const isExcel = response.headers.get('content-type')?.includes('spreadsheet');
   if (isExcel) return response; // caller handles the blob
