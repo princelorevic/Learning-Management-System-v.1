@@ -3,15 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sign In — Enterprise LMS</title>
-<link rel="icon" type="image/x-icon" href="./assets/images/tab-logo.png"">
+<title>Sign In </title>
 <link rel="stylesheet" href="assets/css/design-system.css">
 </head>
 <body>
 <div class="login-page">
   <div class="login-card">
     <div class="login-brand">
-      <img src="assets/images/logo.png" alt="Company logo" class="brand-logo-slot" onerror="this.style.display='none'" >
+      <img src="assets/images/logo.png" alt="Company logo" class="brand-logo-slot" onerror="this.style.display='none'">
       <h1 class="brand-name-slot">Account Login</h1>
       <p>Sign in to your training portal</p>
     </div>
@@ -25,23 +24,33 @@
       </div>
       <div class="form-group">
         <label for="password">Password</label>
-        <input type="password" id="password" autocomplete="current-password" required>
+        <div class="password-field">
+          <input type="password" id="password" autocomplete="current-password" required>
+          <button type="button" class="toggle-password" id="togglePassword">Show</button>
+        </div>
       </div>
       <button type="submit" class="btn btn-primary" style="width:100%;" id="loginBtn">Sign In</button>
-      <a href="index.html" class="login-brand"> <p>Return to Website</p></a>
+      <a href="index.html"><p class="text-muted" style="text-align:center; margin-top:14px;">Return to website</p></a>
     </form>
   </div>
 </div>
 
 <script src="assets/js/api.js"></script>
 <script>
-  // If already logged in, skip straight to the right dashboard
   (function redirectIfLoggedIn() {
     const user = getUser();
     if (user && getToken()) {
       window.location.href = `${user.role.toLowerCase()}/dashboard.html`;
     }
   })();
+
+  document.getElementById('togglePassword').addEventListener('click', () => {
+    const input = document.getElementById('password');
+    const btn = document.getElementById('togglePassword');
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    btn.textContent = isHidden ? 'Hide' : 'Show';
+  });
 
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
