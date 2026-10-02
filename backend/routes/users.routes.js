@@ -4,6 +4,20 @@ const db = require('../config/db');
 const { verifyToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
+const NOT_ASSESSED = 'Not Assessed';
+const LEARNING_STYLES = [
+  'Visual Module',
+  'Auditory Module',
+  'Reading/Writing Module',
+  'Kinesthetic Module'
+];
+
+function normalizeLearningStyle(input) {
+  const list = Array.isArray(input) ? input : String(input || '').split(',');
+  const picked = LEARNING_STYLES.filter((tag) => list.map((t) => String(t).trim()).includes(tag));
+  return picked.length ? picked.join(',') : NOT_ASSESSED;
+}
+
 
 const SAFE_USER_FIELDS = `
   u.id, u.name, u.username, r.role_name AS role, u.department, u.learning_style,
@@ -98,7 +112,7 @@ router.post('/', verifyToken, requireRole('Admin'), async (req, res) => {
         roleRows[0].role_id,
         supervisor_id || null,
         department || null,
-        learning_style || 'Not Assessed',
+        normalizeLearningStyle(learning_style),
         gem_link || null
       ]
     );
@@ -136,7 +150,7 @@ router.put('/:id', verifyToken, requireRole('Admin'), async (req, res) => {
     ];
     const params = [
       name, username, roleRows[0].role_id, supervisor_id || null,
-      department || null, learning_style || 'Not Assessed', gem_link || null, status || 'active'
+      department || null, normalizeLearningStyle(learning_style), gem_link || null, status || 'active'
     ];
 
     if (password && password.trim() !== '') {

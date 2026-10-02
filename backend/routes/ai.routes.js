@@ -130,11 +130,10 @@ router.post('/chat', verifyToken, requireRole('Trainee'), async (req, res) => {
 You are mentoring this specific employee right now:
 - Name: ${trainee?.name || 'Employee'}
 - Department: ${trainee?.department || 'Not specified'}
-- Learning style: ${trainee?.learning_style || 'Not assessed'}
+- Learning style(s): ${(trainee?.learning_style || 'Not Assessed').split(',').join(', ')}
 - Supervisor: ${trainee?.supervisor_name || 'Not assigned'}
 
-Adapt your explanations to their learning style when possible. Keep a respectful, professional, encouraging tone. Never invent company policy you don't know; suggest they confirm with their supervisor when unsure.`;
-
+Adapt your explanations to their learning style(s) when possible. If they have more than one, blend them (for example, a short explanation plus a diagram idea plus a hands-on step).`;
     // Pull the last 20 messages (this one included) for conversation context
     const [historyRows] = await db.query(
       'SELECT sender, content FROM ai_messages WHERE conversation_id = ? ORDER BY message_id DESC LIMIT 20',

@@ -109,13 +109,13 @@
       </div>
       <div class="form-group" id="learningStyleField">
         <label>Learning Style</label>
-        <select id="f_learning_style">
-          <option value="Not Assessed">Not Assessed</option>
-          <option value="Visual Module">Visual</option>
-          <option value="Auditory Module">Auditory</option>
-          <option value="Reading/Writing Module">Reading/Writing</option>
-          <option value="Kinesthetic Module">Kinesthetic</option>
-        </select>
+        <div class="chip-group" id="learningStyleChips">
+          <label class="chip chip-muted"><input type="checkbox" value="Not Assessed"><span>Not Assessed</span></label>
+          <label class="chip"><input type="checkbox" value="Visual Module"><span>Visual</span></label>
+          <label class="chip"><input type="checkbox" value="Auditory Module"><span>Auditory</span></label>
+          <label class="chip"><input type="checkbox" value="Reading/Writing Module"><span>Reading/Writing</span></label>
+          <label class="chip"><input type="checkbox" value="Kinesthetic Module"><span>Kinesthetic</span></label>
+        </div>
         <p class="text-muted mt-8" style="font-size:12px;">
           Used by the AI mentor to adapt how it explains things. Leaving this as "Not Assessed" keeps showing the trainee a reminder to take the assessment.
           <a href="#" id="viewAssessmentLink" target="_blank" rel="noopener">View the assessment form ↗</a>
@@ -205,6 +205,32 @@
       </tr>`).join('');
   }
 
+  const STYLE_CHIPS = () => Array.from(document.querySelectorAll('#learningStyleChips input'));
+
+function getLearningStyles() {
+  const picked = STYLE_CHIPS().filter((c) => c.checked).map((c) => c.value);
+  return picked.length ? picked : ['Not Assessed'];
+}
+
+function setLearningStyles(value) {
+  const list = String(value || 'Not Assessed').split(',').map((t) => t.trim());
+  STYLE_CHIPS().forEach((c) => { c.checked = list.includes(c.value); });
+  if (!STYLE_CHIPS().some((c) => c.checked)) {
+    STYLE_CHIPS().find((c) => c.value === 'Not Assessed').checked = true;
+  }
+}
+
+document.getElementById('learningStyleChips').addEventListener('change', (e) => {
+  const chip = e.target;
+  if (chip.value === 'Not Assessed' && chip.checked) {
+    STYLE_CHIPS().forEach((c) => { if (c !== chip) c.checked = false; });
+  } else if (chip.checked) {
+    STYLE_CHIPS().find((c) => c.value === 'Not Assessed').checked = false;
+  } else if (!STYLE_CHIPS().some((c) => c.checked)) {
+    STYLE_CHIPS().find((c) => c.value === 'Not Assessed').checked = true;
+  }
+});
+  
   function toggleFieldsForRole() {
     const role = document.getElementById('f_role').value;
     document.getElementById('supervisorField').style.display = role === 'Trainee' ? 'block' : 'none';
@@ -216,6 +242,7 @@
   function openCreateModal() {
     document.getElementById('modalTitle').textContent = 'New Account';
     document.getElementById('accountForm').reset();
+    setLearningStyles('Not Assessed');
     document.getElementById('editUserId').value = '';
     document.getElementById('passwordLabel').textContent = 'Password';
     document.getElementById('f_password').required = true;

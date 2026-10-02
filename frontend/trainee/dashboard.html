@@ -58,7 +58,8 @@
   requireAuth(['Trainee']);
 
   async function checkAssessment(learningStyle) {
-    if (learningStyle && learningStyle !== 'Not Assessed') return; // already recorded — nothing to do
+    const tags = String(learningStyle || '').split(',').map((t) => t.trim()).filter(Boolean);
+    if (tags.length && !tags.includes('Not Assessed')) return; // already recorded
     try {
       const settings = await apiFetch('/settings');
       if (settings.assessment_form_url) {
