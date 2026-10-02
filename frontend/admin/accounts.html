@@ -263,8 +263,7 @@ document.getElementById('learningStyleChips').addEventListener('change', (e) => 
     document.getElementById('f_role').value = u.role;
     document.getElementById('f_department').value = u.department || '';
     document.getElementById('f_supervisor_id').value = u.supervisor_id || '';
-    document.getElementById('f_learning_style').value = u.learning_style || 'Not Assessed';
-    document.getElementById('f_gem_link').value = u.gem_link || '';
+    setLearningStyles(u.learning_style);
     document.getElementById('f_status').value = u.status;
     document.getElementById('f_password').required = false;
     document.getElementById('passwordLabel').textContent = 'Password';
@@ -305,7 +304,7 @@ document.getElementById('learningStyleChips').addEventListener('change', (e) => 
       role: document.getElementById('f_role').value,
       department: document.getElementById('f_department').value.trim(),
       supervisor_id: document.getElementById('f_supervisor_id').value || null,
-      learning_style: document.getElementById('f_learning_style').value,
+      learning_style: getLearningStyles(),
       gem_link: document.getElementById('f_gem_link').value.trim(),
       status: document.getElementById('f_status').value
     };
