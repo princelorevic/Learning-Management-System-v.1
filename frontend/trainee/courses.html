@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Courses — Enterprise LMS</title>
 <link rel="stylesheet" href="../assets/css/design-system.css">
+<style>
+  .module-block { margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+  .module-block:last-child { border-bottom:none; }
+  .video-embed { width:100%; aspect-ratio:16/9; border:none; border-radius:var(--radius-md); background:#000; }
+  .quiz-question { margin-bottom:18px; }
+  .quiz-choice { display:flex; align-items:center; gap:8px; padding:8px 0; font-size:14.5px; }
+  .quiz-result-pass { color:#047857; font-weight:700; }
+  .quiz-result-fail { color:#b91c1c; font-weight:700; }
+</style>
 </head>
 <body>
 <div class="app-layout">
@@ -41,12 +50,20 @@
 </div>
 
 <div class="modal-backdrop hidden" id="viewModal">
-  <div class="modal" style="max-width:560px;">
+  <div class="modal" style="max-width:580px;">
     <div class="modal-header"><h2 id="viewTitle">Training</h2><button class="modal-close" id="closeViewModal">&times;</button></div>
     <div id="viewAlert" class="hidden"></div>
     <p class="text-muted mb-16" id="viewDescription"></p>
     <div id="viewModules" class="mb-24"></div>
     <div id="progressSection"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="quizModal">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-header"><h2 id="quizModalTitle">Quiz</h2><button class="modal-close" id="closeQuizModal">&times;</button></div>
+    <div id="quizModalAlert" class="hidden"></div>
+    <div id="quizBody"></div>
   </div>
 </div>
 
@@ -56,6 +73,8 @@
 
   let myEnrollments = [];
   let availableCourses = [];
+  let activeCourseId = null;
+  let activeQuizModuleId = null;
 
   async function loadAll() {
     try {
@@ -109,12 +128,57 @@
     }
   };
 
+  function getEmbedUrl(url) {
+    if (!url) return null;
+    const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{6,})/);
+    if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+    const vimeo = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
+    return null;
+  }
+
+  function renderModuleContent(m) {
+    if (m.module_type === 'video') {
+      const embed = getEmbedUrl(m.video_url);
+      if (embed) {
+        return `<iframe class="video-embed" src="${escapeHtml(embed)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+      }
+      if (m.video_url) {
+        return `<video class="video-embed" controls><source src="${escapeHtml(m.video_url)}"></video>`;
+      }
+      return '<p class="text-muted">No video link set yet.</p>';
+    }
+    if (m.module_type === 'quiz') {
+      const attempt = m.myLatestAttempt;
+      return `
+        ${attempt ? `<p class="text-muted mb-16">Last attempt: ${attempt.score}/${attempt.total_questions} — <span class="${attempt.passed ? 'quiz-result-pass' : 'quiz-result-fail'}">${attempt.passed ? 'Passed' : 'Not yet passed'}</span></p>` : ''}
+        <button class="btn btn-primary" onclick="openQuiz(${m.module_id})">${attempt ? 'Retake Quiz' : 'Take Quiz'} (${m.question_count || 0} questions)</button>`;
+    }
+    return `<p class="text-muted">${escapeHtml(m.content || '')}</p>`;
+  }
+
   window.openCourse = async function (courseId) {
+    activeCourseId = courseId;
     const detail = await apiFetch(`/courses/${courseId}`);
     document.getElementById('viewTitle').textContent = detail.title;
     document.getElementById('viewDescription').textContent = detail.description || '';
+
+    for (const m of detail.modules) {
+      if (m.module_type === 'quiz') {
+        try {
+          const q = await apiFetch(`/quiz/${m.module_id}`);
+          m.myLatestAttempt = q.myLatestAttempt;
+          m.question_count = q.questions.length;
+        } catch { /* leave as-is if it fails to load */ }
+      }
+    }
+
     document.getElementById('viewModules').innerHTML = detail.modules.length
-      ? '<h3 class="mb-16">Content</h3>' + detail.modules.map((m) => `<div class="mb-16"><strong>${escapeHtml(m.title)}</strong><p class="text-muted">${escapeHtml(m.content || '')}</p></div>`).join('')
+      ? detail.modules.map((m) => `
+          <div class="module-block">
+            <strong>${escapeHtml(m.title)}</strong>
+            <div class="mt-8">${renderModuleContent(m)}</div>
+          </div>`).join('')
       : '<p class="text-muted">No content added yet.</p>';
 
     const enrollment = detail.myEnrollment;
@@ -144,6 +208,65 @@
   };
 
   document.getElementById('closeViewModal').addEventListener('click', () => document.getElementById('viewModal').classList.add('hidden'));
+
+  window.openQuiz = async function (moduleId) {
+    activeQuizModuleId = moduleId;
+    document.getElementById('viewModal').classList.add('hidden');
+    document.getElementById('quizModal').classList.remove('hidden');
+    document.getElementById('quizModalAlert').classList.add('hidden');
+    const body = document.getElementById('quizBody');
+    body.innerHTML = '<p class="text-muted">Loading…</p>';
+
+    try {
+      const quiz = await apiFetch(`/quiz/${moduleId}`);
+      document.getElementById('quizModalTitle').textContent = quiz.title;
+      body.innerHTML = `
+        <p class="text-muted mb-16">Passing score: ${quiz.pass_percent}%</p>
+        ${quiz.questions.map((q, qi) => `
+          <div class="quiz-question">
+            <strong>${qi + 1}. ${escapeHtml(q.question_text)}</strong>
+            ${q.choices.map((c) => `
+              <label class="quiz-choice">
+                <input type="radio" name="q-${q.question_id}" value="${c.choice_id}">
+                ${escapeHtml(c.choice_text)}
+              </label>`).join('')}
+          </div>`).join('')}
+        <button class="btn btn-primary" style="width:100%;" onclick="submitQuiz(${moduleId})">Submit Quiz</button>
+        <div id="quizResult" class="hidden mt-16"></div>`;
+    } catch (err) {
+      body.innerHTML = `<p class="text-muted">Could not load quiz: ${escapeHtml(err.message)}</p>`;
+    }
+  };
+
+  window.submitQuiz = async function (moduleId) {
+    const body = document.getElementById('quizBody');
+    const radios = body.querySelectorAll('input[type="radio"]:checked');
+    const answers = {};
+    radios.forEach((r) => {
+      const qId = r.name.replace('q-', '');
+      answers[qId] = r.value;
+    });
+
+    try {
+      const result = await apiFetch(`/quiz/${moduleId}/submit`, { method: 'POST', body: JSON.stringify({ answers }) });
+      const resultEl = document.getElementById('quizResult');
+      resultEl.classList.remove('hidden');
+      resultEl.innerHTML = `
+        <div class="card" style="text-align:center;">
+          <h3 class="mb-8">${result.score} / ${result.total} correct (${result.percent}%)</h3>
+          <p class="${result.passed ? 'quiz-result-pass' : 'quiz-result-fail'} mb-16">${result.passed ? '✓ Passed' : `Not yet passed — need ${result.pass_percent}%`}</p>
+          <button class="btn btn-secondary" onclick="document.getElementById('quizModal').classList.add('hidden'); openCourse(${activeCourseId});">Back to Course</button>
+          <button class="btn btn-primary" onclick="openQuiz(${moduleId})">Retake</button>
+        </div>`;
+    } catch (err) {
+      showAlert(document.getElementById('quizModalAlert'), err.message);
+    }
+  };
+
+  document.getElementById('closeQuizModal').addEventListener('click', () => {
+    document.getElementById('quizModal').classList.add('hidden');
+    openCourse(activeCourseId);
+  });
 
   loadAll();
 </script>

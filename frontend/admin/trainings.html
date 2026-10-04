@@ -5,8 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trainings — Enterprise LMS</title>
 <link rel="stylesheet" href="../assets/css/design-system.css">
-<link rel="icon" type="image/x-icon" href="./assets/images/tab-logo.png"">
-
+<style>
+  .module-row { padding:12px 0; border-bottom:1px solid var(--border); }
+  .module-row:last-child { border-bottom:none; }
+  .type-badge { font-size:11px; padding:2px 8px; border-radius:999px; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; }
+  .type-lesson { background:var(--surface-light); color:var(--text-muted); }
+  .type-video { background:#fce7f3; color:#9d174d; }
+  .type-quiz { background:var(--primary-light); color:var(--primary-hover); }
+  .quiz-panel { background:var(--surface-light); border-radius:var(--radius-md); padding:14px; margin-top:10px; }
+  .qf-choice { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .qf-choice input[type="text"] { flex:1; }
+  .existing-question { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:8px; }
+  .existing-question .choice-line { font-size:13px; padding:2px 0; color:var(--text-muted); }
+  .existing-question .choice-line.correct { color:#047857; font-weight:600; }
+</style>
 </head>
 <body>
 <div class="app-layout">
@@ -72,16 +84,41 @@
 
 <!-- Manage training modal (modules, facilitators, enrollment) -->
 <div class="modal-backdrop hidden" id="manageModal">
-  <div class="modal" style="max-width:640px;">
+  <div class="modal" style="max-width:680px;">
     <div class="modal-header"><h2 id="manageTitle">Manage Training</h2><button class="modal-close" id="closeManageModal">&times;</button></div>
     <div id="manageAlert" class="hidden"></div>
 
     <h3 class="mb-16">Modules</h3>
     <div id="modulesList" class="mb-16"></div>
-    <form id="moduleForm" class="form-row" style="align-items:end; margin-bottom:24px;">
-      <div class="form-group" style="margin-bottom:0;"><label>New module title</label><input type="text" id="m_title" required></div>
-      <button type="submit" class="btn btn-secondary">+ Add</button>
-    </form>
+
+    <div class="card" style="background:var(--surface-light); margin-bottom:24px;">
+      <h4 class="mb-16">Add a module</h4>
+      <form id="moduleForm">
+        <div class="form-row">
+          <div class="form-group"><label>Title</label><input type="text" id="m_title" required></div>
+          <div class="form-group">
+            <label>Type</label>
+            <select id="m_type">
+              <option value="lesson">Lesson (text)</option>
+              <option value="video">Video</option>
+              <option value="quiz">Quiz / Exam / Pre-test</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" id="m_content_field"><label>Content</label><textarea id="m_content" placeholder="Lesson text..."></textarea></div>
+        <div class="form-group hidden" id="m_video_field">
+          <label>Video URL</label>
+          <input type="text" id="m_video_url" placeholder="https://www.youtube.com/watch?v=... or vimeo.com/...">
+          <p class="text-muted mt-8" style="font-size:12px;">YouTube, Vimeo, or a direct video file link all work.</p>
+        </div>
+        <div class="form-group hidden" id="m_quiz_field">
+          <label>Passing score (%)</label>
+          <input type="number" id="m_pass_percent" value="70" min="0" max="100">
+          <p class="text-muted mt-8" style="font-size:12px;">Add this module first, then use "Manage Questions" below to build it. Put it first in the list to use it as a pre-test.</p>
+        </div>
+        <button type="submit" class="btn btn-secondary">+ Add Module</button>
+      </form>
+    </div>
 
     <h3 class="mb-16">Supervisors who can conduct this training</h3>
     <div id="facilitatorsList" class="mb-16"></div>
@@ -113,6 +150,7 @@
   let allSupervisors = [];
   let allTrainees = [];
   let activeCourseId = null;
+  let openQuizPanels = new Set(); // module_ids currently expanded, so re-renders keep them open
 
   async function loadCourses() {
     try {
@@ -205,6 +243,7 @@
   // ---------------- Manage modal ----------------
   window.openManageModal = async function (id) {
     activeCourseId = id;
+    openQuizPanels.clear();
     const c = courses.find((x) => x.course_id === id);
     document.getElementById('manageTitle').textContent = `Manage: ${c.title}`;
     document.getElementById('manageModal').classList.remove('hidden');
@@ -212,15 +251,28 @@
   };
   document.getElementById('closeManageModal').addEventListener('click', () => document.getElementById('manageModal').classList.add('hidden'));
 
+  const TYPE_LABEL = { lesson: 'Lesson', video: 'Video', quiz: 'Quiz' };
+
   async function loadDetail(id) {
     const detail = await apiFetch(`/courses/${id}`);
     document.getElementById('modulesList').innerHTML = detail.modules.length
       ? detail.modules.map((m) => `
-          <div class="flex-between" style="padding:10px 0; border-bottom:1px solid var(--border);">
-            <span>${escapeHtml(m.title)}</span>
-            <button class="btn btn-danger btn-sm" onclick="deleteModule(${id}, ${m.module_id})">Remove</button>
+          <div class="module-row">
+            <div class="flex-between">
+              <span><span class="type-badge type-${m.module_type}">${TYPE_LABEL[m.module_type]}</span> &nbsp;${escapeHtml(m.title)}${m.module_type === 'quiz' ? ` <span class="text-muted">(${m.question_count || 0} questions)</span>` : ''}</span>
+              <span style="white-space:nowrap;">
+                ${m.module_type === 'quiz' ? `<button class="btn btn-secondary btn-sm" onclick="toggleQuizPanel(${m.module_id})">Manage Questions</button>` : ''}
+                <button class="btn btn-danger btn-sm" onclick="deleteModule(${id}, ${m.module_id})">Remove</button>
+              </span>
+            </div>
+            ${m.module_type === 'quiz' ? `<div class="quiz-panel hidden" id="quizPanel-${m.module_id}"></div>` : ''}
           </div>`).join('')
       : '<p class="text-muted">No modules yet.</p>';
+
+    openQuizPanels.forEach((moduleId) => {
+      const panel = document.getElementById(`quizPanel-${moduleId}`);
+      if (panel) { panel.classList.remove('hidden'); loadQuizPanel(moduleId); }
+    });
 
     document.getElementById('facilitatorsList').innerHTML = detail.facilitators.length
       ? detail.facilitators.map((f) => `
@@ -248,7 +300,9 @@
   }
 
   window.deleteModule = async function (courseId, moduleId) {
+    if (!confirm('Remove this module? Any quiz questions inside it go too.')) return;
     await apiFetch(`/courses/${courseId}/modules/${moduleId}`, { method: 'DELETE' });
+    openQuizPanels.delete(moduleId);
     loadDetail(courseId);
   };
   window.removeFacilitator = async function (courseId, supervisorId) {
@@ -261,16 +315,117 @@
     loadCourses();
   };
 
+  function updateModuleTypeFields() {
+    const type = document.getElementById('m_type').value;
+    document.getElementById('m_content_field').classList.toggle('hidden', type !== 'lesson');
+    document.getElementById('m_video_field').classList.toggle('hidden', type !== 'video');
+    document.getElementById('m_quiz_field').classList.toggle('hidden', type !== 'quiz');
+  }
+  document.getElementById('m_type').addEventListener('change', updateModuleTypeFields);
+  updateModuleTypeFields();
+
   document.getElementById('moduleForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('m_title').value.trim();
     if (!title) return;
+    const type = document.getElementById('m_type').value;
+    const payload = { title, module_type: type };
+    if (type === 'lesson') payload.content = document.getElementById('m_content').value.trim();
+    if (type === 'video') payload.video_url = document.getElementById('m_video_url').value.trim();
+    if (type === 'quiz') payload.pass_percent = parseInt(document.getElementById('m_pass_percent').value, 10) || 70;
+
     try {
-      await apiFetch(`/courses/${activeCourseId}/modules`, { method: 'POST', body: JSON.stringify({ title }) });
-      document.getElementById('m_title').value = '';
+      await apiFetch(`/courses/${activeCourseId}/modules`, { method: 'POST', body: JSON.stringify(payload) });
+      document.getElementById('moduleForm').reset();
+      updateModuleTypeFields();
       loadDetail(activeCourseId);
     } catch (err) { showAlert(document.getElementById('manageAlert'), err.message); }
   });
+
+  window.toggleQuizPanel = function (moduleId) {
+    const panel = document.getElementById(`quizPanel-${moduleId}`);
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+      panel.classList.remove('hidden');
+      openQuizPanels.add(moduleId);
+      loadQuizPanel(moduleId);
+    } else {
+      panel.classList.add('hidden');
+      openQuizPanels.delete(moduleId);
+    }
+  };
+
+  async function loadQuizPanel(moduleId) {
+    const panel = document.getElementById(`quizPanel-${moduleId}`);
+    panel.innerHTML = '<p class="text-muted">Loading…</p>';
+    try {
+      const quiz = await apiFetch(`/quiz/${moduleId}`);
+      const questionsHtml = quiz.questions.length
+        ? quiz.questions.map((q) => `
+            <div class="existing-question">
+              <div class="flex-between">
+                <strong>${escapeHtml(q.question_text)}</strong>
+                <button class="btn btn-danger btn-sm" onclick="deleteQuestion(${moduleId}, ${q.question_id})">Delete</button>
+              </div>
+              ${q.choices.map((c) => `<div class="choice-line ${c.is_correct ? 'correct' : ''}">${c.is_correct ? '✓' : '○'} ${escapeHtml(c.choice_text)}</div>`).join('')}
+            </div>`).join('')
+        : '<p class="text-muted mb-16">No questions yet — add the first one below.</p>';
+
+      panel.innerHTML = `
+        <div class="mb-16">${questionsHtml}</div>
+        <div class="card" style="padding:14px;">
+          <label>New question</label>
+          <input type="text" class="qf-text mb-16" placeholder="Question text" style="margin-top:6px;">
+          <div class="qf-choices">
+            ${[0, 1, 2, 3].map((i) => `
+              <div class="qf-choice">
+                <input type="radio" name="correct-${moduleId}" value="${i}" ${i === 0 ? 'checked' : ''}>
+                <input type="text" class="qf-choice-text" placeholder="Choice ${i + 1}${i >= 2 ? ' (optional)' : ''}">
+              </div>`).join('')}
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm mt-8" onclick="addQuestion(${moduleId})">+ Add Question</button>
+        </div>`;
+    } catch (err) {
+      panel.innerHTML = `<p class="text-muted">Could not load questions: ${escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  window.addQuestion = async function (moduleId) {
+    const panel = document.getElementById(`quizPanel-${moduleId}`);
+    const questionText = panel.querySelector('.qf-text').value.trim();
+    const choiceInputs = Array.from(panel.querySelectorAll('.qf-choice'));
+    const correctIndex = parseInt(panel.querySelector(`input[name="correct-${moduleId}"]:checked`).value, 10);
+
+    if (!questionText) { showAlert(document.getElementById('manageAlert'), 'Write the question text first.'); return; }
+
+    const choices = choiceInputs
+      .map((row, i) => ({ text: row.querySelector('.qf-choice-text').value.trim(), is_correct: i === correctIndex }))
+      .filter((c) => c.text);
+
+    if (choices.length < 2) { showAlert(document.getElementById('manageAlert'), 'Provide at least 2 answer choices.'); return; }
+    if (!choices.some((c) => c.is_correct)) { showAlert(document.getElementById('manageAlert'), 'The selected correct choice is empty — fill it in.'); return; }
+
+    try {
+      await apiFetch('/quiz/questions', {
+        method: 'POST',
+        body: JSON.stringify({ module_id: moduleId, question_text: questionText, choices })
+      });
+      loadQuizPanel(moduleId);
+      loadDetail(activeCourseId);
+    } catch (err) {
+      showAlert(document.getElementById('manageAlert'), err.message);
+    }
+  };
+
+  window.deleteQuestion = async function (moduleId, questionId) {
+    try {
+      await apiFetch(`/quiz/questions/${questionId}`, { method: 'DELETE' });
+      loadQuizPanel(moduleId);
+      loadDetail(activeCourseId);
+    } catch (err) {
+      showAlert(document.getElementById('manageAlert'), err.message);
+    }
+  };
 
   document.getElementById('facilitatorForm').addEventListener('submit', async (e) => {
     e.preventDefault();
