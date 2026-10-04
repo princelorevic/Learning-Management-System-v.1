@@ -35,6 +35,7 @@ app.use('/api/courses', require('./routes/courses.routes'));
 app.use('/api/dashboard', require('./routes/dashboard.routes'));
 app.use('/api/reports', require('./routes/reports.routes'));
 app.use('/api/ai', require('./routes/ai.routes'));
+app.use('/api/quiz', require('./routes/quiz.routes'));
 app.use('/api/settings', require('./routes/settings.routes'));
 app.use('/api/public', require('./routes/public.routes'));
 

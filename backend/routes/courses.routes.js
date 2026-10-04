@@ -72,10 +72,18 @@ router.get('/:id', verifyToken, async (req, res) => {
     const [courseRows] = await db.query('SELECT * FROM courses WHERE course_id = ? LIMIT 1', [req.params.id]);
     if (courseRows.length === 0) return res.status(404).json({ error: 'Training not found.' });
 
-    const [modules] = await db.query(
-      'SELECT module_id, title, content, sort_order FROM course_modules WHERE course_id = ? ORDER BY sort_order ASC, module_id ASC',
+        const [modules] = await db.query(
+      `SELECT module_id, title, module_type, content, video_url, pass_percent, sort_order
+       FROM course_modules WHERE course_id = ? ORDER BY sort_order ASC, module_id ASC`,
       [req.params.id]
     );
+
+    for (const m of modules) {
+      if (m.module_type === 'quiz') {
+        const [[qCount]] = await db.query('SELECT COUNT(*) AS count FROM quiz_questions WHERE module_id = ?', [m.module_id]);
+        m.question_count = qCount.count;
+      }
+    }
     const [facilitators] = await db.query(
       `SELECT u.id, u.name FROM course_facilitators cf INNER JOIN users u ON cf.supervisor_id = u.id WHERE cf.course_id = ?`,
       [req.params.id]
@@ -163,13 +171,15 @@ router.delete('/:id', verifyToken, requireRole('Admin'), async (req, res) => {
 // MODULES (lesson content within a training)
 // ============================================================
 router.post('/:id/modules', verifyToken, requireRole('Admin'), async (req, res) => {
-  const { title, content, sort_order } = req.body;
+  const { title, module_type, content, video_url, pass_percent, sort_order } = req.body;
   if (!title || !title.trim()) return res.status(400).json({ error: 'Module title is required.' });
+  const type = ['lesson', 'video', 'quiz'].includes(module_type) ? module_type : 'lesson';
 
   try {
     const [result] = await db.query(
-      'INSERT INTO course_modules (course_id, title, content, sort_order) VALUES (?, ?, ?, ?)',
-      [req.params.id, title.trim(), content || null, sort_order || 0]
+      `INSERT INTO course_modules (course_id, title, module_type, content, video_url, pass_percent, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [req.params.id, title.trim(), type, content || null, video_url || null, pass_percent || 70, sort_order || 0]
     );
     res.status(201).json({ message: 'Module added.', moduleId: result.insertId });
   } catch (error) {
@@ -179,11 +189,13 @@ router.post('/:id/modules', verifyToken, requireRole('Admin'), async (req, res) 
 });
 
 router.put('/:id/modules/:moduleId', verifyToken, requireRole('Admin'), async (req, res) => {
-  const { title, content, sort_order } = req.body;
+  const { title, module_type, content, video_url, pass_percent, sort_order } = req.body;
+  const type = ['lesson', 'video', 'quiz'].includes(module_type) ? module_type : 'lesson';
   try {
     const [result] = await db.query(
-      'UPDATE course_modules SET title = ?, content = ?, sort_order = ? WHERE module_id = ? AND course_id = ?',
-      [title, content || null, sort_order || 0, req.params.moduleId, req.params.id]
+      `UPDATE course_modules SET title = ?, module_type = ?, content = ?, video_url = ?, pass_percent = ?, sort_order = ?
+       WHERE module_id = ? AND course_id = ?`,
+      [title, type, content || null, video_url || null, pass_percent || 70, sort_order || 0, req.params.moduleId, req.params.id]
     );
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Module not found.' });
     res.json({ message: 'Module updated.' });
