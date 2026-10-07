@@ -1,305 +1,271 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="A modern Learning Management System for managing employee training, learning materials, assignments, and progress.">
-    <title> Learning Management System</title>
-    <link rel="icon" type="image/x-icon" href="./assets/images/tab-logo.png"">
-    <link rel="stylesheet" href="./assets/css/index.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise LMS</title>
+<link rel="stylesheet" href="assets/css/design-system.css">
+<style>
+  html { scroll-behavior: smooth; }
+  .eyebrow { display: inline-block; font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--primary); margin-bottom: 10px; }
+
+  .nav-bar { display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; max-width: 1200px; margin: 0 auto; }
+  .nav-bar .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
+  .nav-bar .brand img { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
+  .nav-links { display: flex; gap: 28px; font-size: 14px; font-weight: 500; }
+  .nav-links a:hover { color: var(--primary); }
+  .nav-right { display: flex; align-items: center; gap: 20px; }
+
+  .hero { text-align: center; padding: 60px 20px 0; max-width: 780px; margin: 0 auto; }
+  .hero h1 { font-size: 42px; line-height: 1.15; margin-bottom: 18px; }
+  .hero p { font-size: 17px; max-width: 560px; margin: 0 auto 28px; }
+  .hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+  .trust-badges { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; font-size: 13.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 48px; }
+
+  .preview-mockup { max-width: 460px; margin: 0 auto 64px; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); overflow: hidden; background: var(--surface); text-align: left; }
+  .preview-topbar { display: flex; gap: 6px; padding: 12px 14px; background: var(--surface-light); border-bottom: 1px solid var(--border); }
+  .preview-topbar span { width: 9px; height: 9px; border-radius: 50%; background: var(--border-hover); }
+  .preview-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .preview-row { display: flex; align-items: center; gap: 10px; font-size: 13.5px; }
+  .preview-row .grow { flex: 1; }
+
+  .section { max-width: 1200px; margin: 0 auto; padding: 24px 40px 72px; }
+  .section-title { text-align: center; margin-bottom: 36px; max-width: 560px; margin-left: auto; margin-right: auto; }
+  .section-title h2 { font-size: 28px; margin-bottom: 10px; }
+
+  .feature-grid, .solutions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .feature-card { text-align: center; }
+  .feature-card .icon { font-size: 28px; margin-bottom: 12px; }
+  .feature-card h3 { margin-bottom: 8px; }
+  .feature-card p { font-size: 13.5px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .two-col .card h3 { margin-bottom: 10px; }
+
+  .solutions-grid .card { border-top: 3px solid var(--primary); }
+  .solutions-grid h3 { margin-bottom: 8px; }
+  .solutions-grid p { font-size: 13.5px; }
+
+  .cta-banner { background: var(--sidebar-bg); color: #fff; text-align: center; padding: 56px 20px; }
+  .cta-banner h2 { color: #fff; font-size: 26px; margin-bottom: 10px; }
+  .cta-banner p { color: #cbd5e1; margin-bottom: 24px; }
+
+  .contact-card { max-width: 480px; margin: 0 auto; text-align: center; }
+  .contact-card .contact-line { font-size: 14.5px; margin-bottom: 10px; color: var(--text-muted); }
+
+  footer { border-top: 1px solid var(--border); }
+  .footer-top { max-width: 1200px; margin: 0 auto; padding: 48px 40px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px; }
+  .footer-top p { font-size: 13.5px; margin-top: 8px; }
+  .footer-col div:first-child { font-weight: 600; margin-bottom: 12px; font-size: 13.5px; }
+  .footer-col a { display: block; font-size: 13.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .footer-col a:hover { color: var(--primary); }
+  .footer-bottom { text-align: center; padding: 20px; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-light); }
+
+  @media (max-width: 800px) {
+    .nav-links { display: none; }
+    .two-col, .footer-top { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .nav-bar { padding: 16px 20px; }
+    .hero { padding: 40px 16px 0; }
+    .hero h1 { font-size: 30px; }
+    .section { padding: 8px 16px 56px; }
+  }
+</style>
 </head>
 <body>
 
-    <!-- ================= NAVBAR ================= -->
-    <header class="navbar">
-        <div class="nav-container">
-            <a href="index.html" class="logo">
-                <span class="logo-mark">L</span>
-                <span>Learning Management System</span>
-            </a>
-            <nav class="nav-links" id="navLinks">
-                <a href="#home">Home</a>
-                <a href="#features">Features</a>
-                <a href="#roles">Roles</a>
-                <a href="#workflow">How It Works</a>
-                <a href="login.html" class="nav-login">Login Portal</a>
-            </nav>
-            <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
-        </div>
-    </header>
+<nav class="nav-bar">
+  <div class="brand">
+    <img src="assets/images/logo.png" alt="" class="brand-logo-slot" onerror="this.style.display='none'">
+    <span class="brand-name-slot">Enterprise LMS</span>
+  </div>
+  <div class="nav-links">
+    <a href="#about">About</a>
+    <a href="#features">Features</a>
+    <a href="#solutions">Solutions</a>
+    <a href="#contact">Contact</a>
+  </div>
+  <div class="nav-right">
+    <a href="login.html" class="btn btn-primary">Log In</a>
+  </div>
+</nav>
 
-    <!-- ================= HERO ================= -->
-    <main>
-        <section class="hero" id="home">
-            <div class="hero-container">
-                <div class="hero-content">
-                    <span class="eyebrow">Learning & Training Platform</span>
-                    <h1>Empowering teams through <span>better learning.</span></h1>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Manage training programs, learning materials, assignments, assessments, and employee progress in one centralized platform.</p>
-                    
-                    <div class="hero-buttons">
-                        <a href="login.html" class="btn btn-primary">Login to LMS</a>
-                        <a href="#features" class="btn btn-secondary">Explore Features</a>
-                    </div>
-                </div>
+<section class="hero" id="hero">
+  <span class="eyebrow">Enterprise Learning Management System</span>
+  <h1>Empowering Learning.<br>Building Better Teams.</h1>
+  <p>
+    <span class="brand-name-slot">Enterprise LMS</span> gives your organization one place to manage accounts, run
+    trainings, track progress, and support every employee with an AI-guided learning mentor.
+  </p>
+  <div class="hero-ctas">
+    <a href="#features" class="btn btn-primary">Explore Features</a>
+    <a href="login.html" class="btn btn-secondary">Employee Login</a>
+  </div>
+  <div class="trust-badges">
+    <div>✅ Role-Based Access</div>
+    <div>🤖 AI-Guided Learning</div>
+    <div>🔒 Secure Platform</div>
+  </div>
+</section>
 
-                <!-- Dashboard Preview -->
-                <div class="dashboard-preview">
-                    <div class="preview-window">
-                        <div class="preview-topbar">
-                            <div class="window-dots">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
-                            <span>LMS Dashboard</span>
-                        </div>
+<div class="preview-mockup">
+  <div class="preview-topbar"><span></span><span></span><span></span></div>
+  <div class="preview-body">
+    <div class="preview-row"><span>✅</span><span class="grow">Workplace Safety Training</span><span class="badge badge-success">92%</span></div>
+    <div class="preview-row"><span>🔄</span><span class="grow">Quality Control Basics</span><span class="badge badge-info">In Progress</span></div>
+    <div class="preview-row"><span>🤖</span><span class="grow">AI Mentor Session</span><span class="text-muted">Today</span></div>
+  </div>
+</div>
 
-                        <div class="preview-body">
-                            <aside class="preview-sidebar">
-                                <div class="preview-logo">LMS</div>
-                                <div class="side-item active">Dashboard</div>
-                                <div class="side-item">Courses</div>
-                                <div class="side-item">Assignments</div>
-                                <div class="side-item">Progress</div>
-                            </aside>
+<section class="section">
+  <div class="stat-grid" id="statGrid">
+    <div class="stat-card"><div class="stat-label">Loading…</div></div>
+  </div>
+</section>
 
-                            <div class="preview-main">
-                                <div class="preview-heading">
-                                    <div>
-                                        <small>Welcome back</small>
-                                        <h3>Training Dashboard</h3>
-                                    </div>
-                                    <div class="profile-circle">U</div>
-                                </div>
+<section class="section" id="about">
+  <div class="section-title">
+    <span class="eyebrow">About</span>
+    <h2>A Modern Learning Platform Built for Your Team</h2>
+    <p class="text-muted">
+      <span class="brand-name-slot">Enterprise LMS</span> is tailored to your organization's training needs — whether
+      you're an admin, a supervisor, or a frontline employee, everyone manages learning from one centralized portal.
+    </p>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <h3>🎯 Mission</h3>
+      <p class="text-muted">Deliver a reliable learning platform that improves employee growth and strict adherence to company standards.</p>
+    </div>
+    <div class="card">
+      <h3>🚀 Vision</h3>
+      <p class="text-muted">Become a trusted digital learning backbone for your organization through simplicity, structure, and AI integration.</p>
+    </div>
+  </div>
+</section>
 
-                                <div class="preview-stats">
-                                    <div class="preview-card">
-                                        <small>Courses</small>
-                                        <strong>24</strong>
-                                    </div>
-                                    <div class="preview-card">
-                                        <small>Learners</small>
-                                        <strong>128</strong>
-                                    </div>
-                                    <div class="preview-card">
-                                        <small>Completion</small>
-                                        <strong>86%</strong>
-                                    </div>
-                                </div>
+<section class="section" id="features">
+  <div class="section-title">
+    <span class="eyebrow">Core Features</span>
+    <h2>Everything You Need In One Platform</h2>
+    <p class="text-muted">Powerful tools designed for admins, supervisors, and every employee in between.</p>
+  </div>
+  <div class="feature-grid">
+    <div class="card feature-card">
+      <div class="icon">🗂️</div>
+      <h3>Role-Based Dashboards</h3>
+      <p class="text-muted">Separate, purpose-built views for Admins, Supervisors, and Trainees.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="icon">📚</div>
+      <h3>Course & Training Management</h3>
+      <p class="text-muted">Create, organize, publish, and assign trainings with structured modules.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="icon">🤖</div>
+      <h3>AI Learning Mentor</h3>
+      <p class="text-muted">Every trainee gets a mentor that adapts to how they learn best.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="icon">📊</div>
+      <h3>Live Excel Reports</h3>
+      <p class="text-muted">Generate up-to-date reports on trainees, supervisors, and trainings in one click.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="icon">🎓</div>
+      <h3>Auto-Issued Certificates</h3>
+      <p class="text-muted">Completed trainings are recognized automatically the moment a trainee finishes.</p>
+    </div>
+    <div class="card feature-card">
+      <div class="icon">🎨</div>
+      <h3>White-Label Ready</h3>
+      <p class="text-muted">Swap in your own logo, company name, and brand color in minutes.</p>
+    </div>
+  </div>
+</section>
 
-                                <div class="progress-card">
-                                    <div class="progress-header">
-                                        <strong>Training Progress</strong>
-                                        <span>78%</span>
-                                    </div>
-                                    <div class="progress-bar">
-                                        <div></div>
-                                    </div>
-                                </div>
+<section class="section" id="solutions">
+  <div class="section-title">
+    <span class="eyebrow">Solutions</span>
+    <h2>Designed For Every Role</h2>
+    <p class="text-muted">One platform, three tailored experiences.</p>
+  </div>
+  <div class="solutions-grid">
+    <div class="card">
+      <h3>🛠️ For Admins</h3>
+      <p class="text-muted">Create trainings, manage every account, configure the AI mentor, and see organization-wide stats from one dashboard.</p>
+    </div>
+    <div class="card">
+      <h3>👥 For Supervisors</h3>
+      <p class="text-muted">Track your team's progress, conduct assigned trainings, and export team reports whenever you need them.</p>
+    </div>
+    <div class="card">
+      <h3>🎓 For Trainees</h3>
+      <p class="text-muted">Browse and complete trainings, track your own progress, and get one-on-one support from your AI mentor.</p>
+    </div>
+  </div>
+</section>
 
-                                <div class="course-preview">
-                                    <div class="course-item">
-                                        <span class="course-icon">📚</span>
-                                        <div>
-                                            <strong>Product Training</strong>
-                                            <small>In Progress</small>
-                                        </div>
-                                        <span>75%</span>
-                                    </div>
-                                    <div class="course-item">
-                                        <span class="course-icon">📝</span>
-                                        <div>
-                                            <strong>Sales Training</strong>
-                                            <small>Completed</small>
-                                        </div>
-                                        <span>100%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+<section class="cta-banner">
+  <h2>Ready to get started?</h2>
+  <p>Log in to your account and pick up right where you left off.</p>
+  <a href="login.html" class="btn btn-primary">Employee Login</a>
+</section>
 
-        <!-- ================= STATS ================= -->
-        <section class="stats-section">
-            <div class="container stats-grid">
-                <div class="stat">
-                    <strong id="statCourses">--</strong>
-                    <span>Available Courses</span>
-                </div>
-                <div class="stat">
-                    <strong id="statLearners">--</strong>
-                    <span>Active Learners</span>
-                </div>
-                <div class="stat">
-                    <strong id="statCompleted">--</strong>
-                    <span>Completed Trainings</span>
-                </div>
-                <div class="stat">
-                    <strong id="statDepartments">--</strong>
-                    <span>Departments</span>
-                </div>
-            </div>
-        </section>
+<section class="section" id="contact">
+  <div class="section-title">
+    <span class="eyebrow">Contact</span>
+    <h2>Need Help With Your Account?</h2>
+    <p class="text-muted">For password resets or account issues, reach out to your organization's admin team.</p>
+  </div>
+  <div class="card contact-card">
+    <!-- EDIT ME: replace with your organization's real contact details -->
+    <div class="contact-line">📧 admin@yourcompany.com</div>
+    <div class="contact-line">📞 +63 900 000 0000</div>
+    <div class="contact-line">📍 Your Company Address, City, Philippines</div>
+    <a href="mailto:admin@yourcompany.com" class="btn btn-primary mt-16">Send an Email</a>
+  </div>
+</section>
 
-        <!-- ================= FEATURES ================= -->
-        <section class="section" id="features">
-            <div class="container">
-                <div class="section-heading">
-                    <span class="eyebrow">Platform Features</span>
-                    <h2>Everything you need to manage learning</h2>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Build a structured learning environment for your organization.</p>
-                </div>
+<footer>
+  <div class="footer-top">
+    <div>
+      <strong class="brand-name-slot">Enterprise LMS</strong>
+      <p class="text-muted">Your organization's official training platform.</p>
+    </div>
+    <div class="footer-col">
+      <div>Quick Links</div>
+      <a href="#about">About</a>
+      <a href="#features">Features</a>
+      <a href="#solutions">Solutions</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <div class="footer-col">
+      <div>System</div>
+      <a href="login.html">Employee Login</a>
+    </div>
+  </div>
+  <div class="footer-bottom">© <span id="footerYear"></span> <span class="brand-name-slot">Enterprise LMS</span>. All rights reserved.</div>
+</footer>
 
-                <div class="feature-grid">
-                    <article class="feature-card">
-                        <div class="feature-icon">📚</div>
-                        <h3>Course Management</h3>
-                        <p>Create and organize training courses, learning materials, and assignments in one centralized system.</p>
-                    </article>
-                    <article class="feature-card">
-                        <div class="feature-icon">👥</div>
-                        <h3>Learner Management</h3>
-                        <p>Manage trainees, supervisors, departments, and learning assignments through role-based access.</p>
-                    </article>
-                    <article class="feature-card">
-                        <div class="feature-icon">📊</div>
-                        <h3>Progress Tracking</h3>
-                        <p>Monitor employee progress, assessment results, course completion, and team performance.</p>
-                    </article>
-                    <article class="feature-card">
-                        <div class="feature-icon">📝</div>
-                        <h3>Assignments & Assessments</h3>
-                        <p>Provide learning activities and connect external assessment forms to your training workflow.</p>
-                    </article>
-                    <article class="feature-card">
-                        <div class="feature-icon">🔐</div>
-                        <h3>Role-Based Access</h3>
-                        <p>Give HR, supervisors, and trainees access to the tools and information relevant to their responsibilities.</p>
-                    </article>
-                    <article class="feature-card">
-                        <div class="feature-icon">📈</div>
-                        <h3>Reports & Analytics</h3>
-                        <p>View training performance and generate meaningful reports for learning management decisions.</p>
-                    </article>
-                </div>
-            </div>
-        </section>
+<script src="assets/js/api.js"></script>
+<script>
+  document.getElementById('footerYear').textContent = new Date().getFullYear();
 
-        <!-- ================= ROLES ================= -->
-        <section class="section section-alt" id="roles">
-            <div class="container">
-                <div class="section-heading">
-                    <span class="eyebrow">Designed for Every Role</span>
-                    <h2>One platform. Different responsibilities.</h2>
-                </div>
-
-                <div class="roles-grid">
-                    <article class="role-card">
-                        <span class="role-number">01</span>
-                        <h3>HR / Admin</h3>
-                        <p>Manage courses, users, assignments, training materials, and organization-wide learning activities.</p>
-                    </article>
-                    <article class="role-card">
-                        <span class="role-number">02</span>
-                        <h3>Supervisors</h3>
-                        <p>Monitor team performance, assigned training, learner progress, and assessment results.</p>
-                    </article>
-                    <article class="role-card">
-                        <span class="role-number">03</span>
-                        <h3>Trainees</h3>
-                        <p>Access assigned courses, learning materials, assessments, and personal training progress.</p>
-                    </article>
-                </div>
-            </div>
-        </section>
-
-        <!-- ================= WORKFLOW ================= -->
-        <section class="section" id="workflow">
-            <div class="container">
-                <div class="section-heading">
-                    <span class="eyebrow">Simple Training Workflow</span>
-                    <h2>From assignment to completion</h2>
-                </div>
-
-                <div class="workflow">
-                    <div class="workflow-item">
-                        <div class="workflow-number">01</div>
-                        <div>
-                            <h3>Assign</h3>
-                            <p>Assign courses and training activities to employees.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="workflow-line"></div>
-                    
-                    <div class="workflow-item">
-                        <div class="workflow-number">02</div>
-                        <div>
-                            <h3>Learn</h3>
-                            <p>Employees access materials and complete their assigned learning.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="workflow-line"></div>
-                    
-                    <div class="workflow-item">
-                        <div class="workflow-number">03</div>
-                        <div>
-                            <h3>Assess</h3>
-                            <p>Complete assessments and learning activities.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="workflow-line"></div>
-                    
-                    <div class="workflow-item">
-                        <div class="workflow-number">04</div>
-                        <div>
-                            <h3>Track</h3>
-                            <p>Supervisors and HR monitor progress and completion.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ================= CTA ================= -->
-        <section class="cta-section">
-            <div class="container cta-container">
-                <div>
-                    <span class="eyebrow">Start Learning</span>
-                    <h2>Ready to access your training portal?</h2>
-                    <p>Login to continue your learning journey.</p>
-                </div>
-                <a href="login.html" class="btn btn-primary">Open Login Portal</a>
-            </div>
-        </section>
-    </main>
-
-    <!-- ================= FOOTER ================= -->
-    <footer class="footer">
-        <div class="container footer-content">
-            <div>
-                <strong>Learning Management System</strong>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-            </div>
-            <div>
-                <a href="#home">Home</a>
-                <a href="#features">Features</a>
-                <a href="#roles">Roles</a>
-                <a href="login.html">Login</a>
-            </div>
-        </div>
-        
-        <div class="footer-bottom">
-            © 2026 Learning Management System. All rights reserved.
-        </div>
-    </footer>
-
-    <script src="./assets/js/index.js"></script>
+  async function loadStats() {
+    try {
+      const s = await apiFetch('/public/stats');
+      document.getElementById('statGrid').innerHTML = `
+        <div class="stat-card"><div class="stat-label">Active Trainees</div><div class="stat-value">${s.total_trainees}</div></div>
+        <div class="stat-card"><div class="stat-label">Trainings Available</div><div class="stat-value">${s.total_trainings}</div></div>
+        <div class="stat-card"><div class="stat-label">Trainings Completed</div><div class="stat-value">${s.total_completions}</div></div>
+      `;
+    } catch {
+      document.getElementById('statGrid').innerHTML = '';
+    }
+  }
+  loadStats();
+</script>
 </body>
 </html>
