@@ -53,7 +53,7 @@
     <div id="enrollmentsList" class="mb-16"></div>
     <form id="enrollForm" class="form-row" style="align-items:end;">
       <div class="form-group" style="margin-bottom:0;"><label>Enroll a trainee from my team</label><select id="e_trainee_select"></select></div>
-      <button type="submit" class="btn btn-secondary">+ Enroll</button>
+      <button type="submit" class="btn btn-secondary">Enroll</button>
     </form>
   </div>
 </div>
@@ -84,34 +84,48 @@
         <td><span class="badge ${statusBadgeClass(c.status)}">${escapeHtml(c.status)}</span></td>
         <td>${c.duration_hours} hrs</td>
         <td style="text-align:right;"><button class="btn btn-secondary btn-sm" onclick="openManage(${c.course_id})">Open</button></td>
-      </tr>`).join('') : '<tr><td colspan="5" class="text-muted">No trainings available yet.</td></tr>';
+      </tr>`).join('') : '<tr><td colspan="5" class="empty-state">No trainings to show yet. They appear here once your admin publishes a training or assigns you as its facilitator.</td></tr>';
   }
 
   window.openManage = async function (id) {
     activeCourseId = id;
     const c = courses.find((x) => x.course_id === id);
     document.getElementById('manageTitle').textContent = c.title;
+    document.getElementById('manageAlert').classList.add('hidden');
     document.getElementById('manageModal').classList.remove('hidden');
-    if (myTeam.length === 0) {
-      const d = await apiFetch('/dashboard/supervisor');
-      myTeam = d.team;
+    try {
+      if (myTeam.length === 0) {
+        const d = await apiFetch('/dashboard/supervisor');
+        myTeam = d.team || [];
+      }
+      await refreshDetail();
+    } catch (err) {
+      showAlert(document.getElementById('manageAlert'), err.message);
     }
-    document.getElementById('e_trainee_select').innerHTML = myTeam.length
-      ? myTeam.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')
-      : '<option value="">No one on your team yet</option>';
-    await refreshDetail();
   };
   document.getElementById('closeManageModal').addEventListener('click', () => document.getElementById('manageModal').classList.add('hidden'));
+
+  function moduleBody(m) {
+    if (m.module_type === 'video') return m.video_url ? `<p><a href="${escapeHtml(m.video_url)}" target="_blank" rel="noopener">▶ Open video</a></p>` : '<p class="text-muted">No video link set yet.</p>';
+    if (m.module_type === 'quiz') return `<p class="text-muted">Quiz · ${m.question_count || 0} questions · pass at ${m.pass_percent}%</p>`;
+    return `<p class="text-muted">${escapeHtml(m.content || 'No description provided.')}</p>`;
+  }
+  const TYPE_LABEL = { lesson: 'Lesson', video: 'Video', quiz: 'Quiz' };
 
   async function refreshDetail() {
     const detail = await apiFetch(`/courses/${activeCourseId}`);
     document.getElementById('modulesList').innerHTML = detail.modules.length
-      ? detail.modules.map((m) => `<div class="mb-16"><strong>${escapeHtml(m.title)}</strong><p class="text-muted">${escapeHtml(m.content || 'No description provided.')}</p></div>`).join('')
-      : '<p class="text-muted">No content added yet — ask your admin to add modules.</p>';
+      ? detail.modules.map((m, i) => `<div class="mb-16"><span class="badge badge-info">${TYPE_LABEL[m.module_type] || 'Lesson'}</span> <strong>${i + 1}. ${escapeHtml(m.title)}</strong>${moduleBody(m)}</div>`).join('')
+      : '<div class="empty-state">No content added yet. Ask your admin to add modules.</div>';
 
     const enrollments = await apiFetch(`/courses/${activeCourseId}/enrollments`);
     const myTeamIds = myTeam.map((t) => t.id);
     const myEnrollments = enrollments.filter((e) => myTeamIds.includes(e.user_id));
+    const enrolledIds = myEnrollments.map((e) => e.user_id);
+    const available = myTeam.filter((t) => !enrolledIds.includes(t.id));
+    document.getElementById('e_trainee_select').innerHTML = available.length
+      ? available.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')
+      : `<option value="">${myTeam.length ? 'Your whole team is already enrolled' : 'No one on your team yet'}</option>`;
 
     document.getElementById('enrollmentsList').innerHTML = myEnrollments.length
       ? myEnrollments.map((e) => `
@@ -122,17 +136,27 @@
             </div>
             <div>
               <input type="number" min="0" max="100" value="${e.progress}" style="width:70px; display:inline-block;" id="progress-${e.user_id}">
-              <button class="btn btn-secondary btn-sm" onclick="updateProgress(${e.user_id})">Update</button>
+              ${e.status === 'Pending Request' ? `<button class="btn btn-primary btn-sm" onclick="approve(${e.user_id})">Approve</button>` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="updateProgress(${e.user_id})">Save</button>
             </div>
           </div>`).join('')
-      : '<p class="text-muted">None of your team is enrolled in this training yet.</p>';
+      : '<div class="empty-state">None of your team is enrolled in this training yet.</div>';
   }
+
+  window.approve = async function (userId) {
+    try {
+      await apiFetch(`/courses/${activeCourseId}/enroll/${userId}`, { method: 'PUT', body: JSON.stringify({ progress: 0, status: 'Enrolled' }) });
+      await refreshDetail();
+      toast('Trainee approved');
+    } catch (err) { toast(err.message, 'error'); }
+  };
 
   window.updateProgress = async function (userId) {
     const progress = document.getElementById(`progress-${userId}`).value;
     try {
       await apiFetch(`/courses/${activeCourseId}/enroll/${userId}`, { method: 'PUT', body: JSON.stringify({ progress: Number(progress) }) });
-      refreshDetail();
+      await refreshDetail();
+      toast('Progress saved');
     } catch (err) {
       showAlert(document.getElementById('manageAlert'), err.message);
     }
@@ -144,7 +168,8 @@
     if (!user_id) return;
     try {
       await apiFetch(`/courses/${activeCourseId}/enroll`, { method: 'POST', body: JSON.stringify({ user_id }) });
-      refreshDetail();
+      await refreshDetail();
+      toast('Trainee enrolled');
     } catch (err) {
       showAlert(document.getElementById('manageAlert'), err.message);
     }

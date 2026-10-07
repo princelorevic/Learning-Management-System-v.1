@@ -146,3 +146,15 @@ function showAlert(containerEl, message, type = 'error') {
   containerEl.innerHTML = `<div class="alert alert-${type}">${escapeHtml(message)}</div>`;
   containerEl.classList.remove('hidden');
 }
+
+
+// Small pop-up message (bottom-right) for "Saved" / error feedback
+function toast(message, type = 'success') {
+  let box = document.getElementById('toastBox');
+  if (!box) { box = document.createElement('div'); box.id = 'toastBox'; document.body.appendChild(box); }
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.textContent = message;
+  box.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}

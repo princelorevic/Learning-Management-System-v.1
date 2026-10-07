@@ -82,63 +82,70 @@
   </div>
 </div>
 
-<!-- Manage training modal (modules, facilitators, enrollment) -->
+<!-- Manage training modal (tabs: modules / supervisors / trainees) -->
 <div class="modal-backdrop hidden" id="manageModal">
   <div class="modal" style="max-width:680px;">
     <div class="modal-header"><h2 id="manageTitle">Manage Training</h2><button class="modal-close" id="closeManageModal">&times;</button></div>
+    <div class="status-bar" id="statusBar"></div>
     <div id="manageAlert" class="hidden"></div>
 
-    <h3 class="mb-16">Modules</h3>
-    <div id="modulesList" class="mb-16"></div>
+    <div class="tabs">
+      <button class="tab active" data-tab="modules" id="tabBtn-modules">Modules</button>
+      <button class="tab" data-tab="supervisors" id="tabBtn-supervisors">Supervisors</button>
+      <button class="tab" data-tab="trainees" id="tabBtn-trainees">Trainees</button>
+    </div>
 
-    <div class="card" style="background:var(--surface-light); margin-bottom:24px;">
-      <h4 class="mb-16">Add a module</h4>
-      <form id="moduleForm">
-        <div class="form-row">
-          <div class="form-group"><label>Title</label><input type="text" id="m_title" required></div>
-          <div class="form-group">
-            <label>Type</label>
-            <select id="m_type">
-              <option value="lesson">Lesson (text)</option>
-              <option value="video">Video</option>
-              <option value="quiz">Quiz / Exam / Pre-test</option>
-            </select>
+    <div class="tab-panel" id="tab-modules">
+      <div id="modulesList" class="mb-16"></div>
+      <div class="card" style="background:var(--surface-light);">
+        <h4 class="mb-16">Add a module</h4>
+        <form id="moduleForm">
+          <div class="form-row">
+            <div class="form-group"><label>Title</label><input type="text" id="m_title" required></div>
+            <div class="form-group">
+              <label>Type</label>
+              <select id="m_type">
+                <option value="lesson">Lesson (text)</option>
+                <option value="video">Video</option>
+                <option value="quiz">Quiz / Exam / Pre-test</option>
+              </select>
+            </div>
           </div>
-        </div>
-        <div class="form-group" id="m_content_field"><label>Content</label><textarea id="m_content" placeholder="Lesson text..."></textarea></div>
-        <div class="form-group hidden" id="m_video_field">
-          <label>Video URL</label>
-          <input type="text" id="m_video_url" placeholder="https://www.youtube.com/watch?v=... or vimeo.com/...">
-          <p class="text-muted mt-8" style="font-size:12px;">YouTube, Vimeo, or a direct video file link all work.</p>
-        </div>
-        <div class="form-group hidden" id="m_quiz_field">
-          <label>Passing score (%)</label>
-          <input type="number" id="m_pass_percent" value="70" min="0" max="100">
-          <p class="text-muted mt-8" style="font-size:12px;">Add this module first, then use "Manage Questions" below to build it. Put it first in the list to use it as a pre-test.</p>
-        </div>
-        <button type="submit" class="btn btn-secondary">+ Add Module</button>
+          <div class="form-group" id="m_content_field"><label>Content</label><textarea id="m_content" placeholder="Lesson text..."></textarea></div>
+          <div class="form-group hidden" id="m_video_field">
+            <label>Video URL</label>
+            <input type="text" id="m_video_url" placeholder="https://www.youtube.com/watch?v=... or vimeo.com/...">
+            <p class="text-muted mt-8" style="font-size:12px;">YouTube, Vimeo, or a direct video file link all work.</p>
+          </div>
+          <div class="form-group hidden" id="m_quiz_field">
+            <label>Passing score (%)</label>
+            <input type="number" id="m_pass_percent" value="70" min="0" max="100">
+            <p class="text-muted mt-8" style="font-size:12px;">Save the module first, then click "Questions" on it to build the quiz.</p>
+          </div>
+          <button type="submit" class="btn btn-primary">Save Module</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="tab-panel hidden" id="tab-supervisors">
+      <p class="text-muted mb-16">Supervisors who can conduct this training.</p>
+      <div id="facilitatorsList" class="mb-16"></div>
+      <form id="facilitatorForm" class="form-row" style="align-items:end;">
+        <div class="form-group" style="margin-bottom:0;"><label>Assign supervisor</label><select id="f_supervisor_select"></select></div>
+        <button type="submit" class="btn btn-primary">Assign</button>
       </form>
     </div>
 
-    <h3 class="mb-16">Supervisors who can conduct this training</h3>
-    <div id="facilitatorsList" class="mb-16"></div>
-    <form id="facilitatorForm" class="form-row" style="align-items:end; margin-bottom:24px;">
-      <div class="form-group" style="margin-bottom:0;">
-        <label>Assign supervisor</label>
-        <select id="f_supervisor_select"></select>
-      </div>
-      <button type="submit" class="btn btn-secondary">+ Assign</button>
-    </form>
+    <div class="tab-panel hidden" id="tab-trainees">
+      <p class="text-muted mb-16">Trainees taking this training. "Pending Request" means the trainee asked to join and needs your approval.</p>
+      <div id="enrollmentsList" class="mb-16"></div>
+      <form id="enrollForm" class="form-row" style="align-items:end;">
+        <div class="form-group" style="margin-bottom:0;"><label>Enroll trainee</label><select id="e_trainee_select"></select></div>
+        <button type="submit" class="btn btn-primary">Enroll</button>
+      </form>
+    </div>
 
-    <h3 class="mb-16">Enrolled trainees</h3>
-    <div id="enrollmentsList" class="mb-16"></div>
-    <form id="enrollForm" class="form-row" style="align-items:end;">
-      <div class="form-group" style="margin-bottom:0;">
-        <label>Enroll trainee</label>
-        <select id="e_trainee_select"></select>
-      </div>
-      <button type="submit" class="btn btn-secondary">+ Enroll</button>
-    </form>
+    <div class="modal-footer"><button class="btn btn-primary" id="doneManageBtn">Done</button></div>
   </div>
 </div>
 
@@ -164,14 +171,14 @@
   function renderCourses() {
     const tbody = document.getElementById('coursesTable');
     if (courses.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-muted">No trainings yet. Create your first one.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="text-muted">No trainings yet. Click "+ New Training" to create your first one.</td></tr>';
       return;
     }
     tbody.innerHTML = courses.map((c) => `
       <tr>
         <td><strong>${escapeHtml(c.title)}</strong></td>
         <td>${escapeHtml(c.department_target)}</td>
-        <td><span class="badge ${statusBadgeClass(c.status)}">${escapeHtml(c.status)}</span></td>
+        <td><span class="badge ${statusBadgeClass(c.status)}">${escapeHtml(c.status)}</span>${c.status === 'Draft' ? '<div class="text-muted" style="font-size:11px;">Hidden from trainees</div>' : ''}</td>
         <td>${c.duration_hours} hrs</td>
         <td>${c.enrolled_count}</td>
         <td>${c.completed_count}</td>
@@ -241,78 +248,201 @@
   });
 
   // ---------------- Manage modal ----------------
+  let currentDetail = null;
+  let editingModuleId = null;
+  const TYPE_LABEL = { lesson: 'Lesson', video: 'Video', quiz: 'Quiz' };
+
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab-panel').forEach((p) => p.classList.toggle('hidden', p.id !== `tab-${name}`));
+  }
+  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+
   window.openManageModal = async function (id) {
     activeCourseId = id;
     openQuizPanels.clear();
-    const c = courses.find((x) => x.course_id === id);
-    document.getElementById('manageTitle').textContent = `Manage: ${c.title}`;
+    editingModuleId = null;
+    document.getElementById('manageAlert').classList.add('hidden');
+    showTab('modules');
     document.getElementById('manageModal').classList.remove('hidden');
-    await Promise.all([loadDetail(id), loadDropdowns(id)]);
+    try {
+      await loadDropdowns();
+      await loadDetail(id);
+    } catch (err) {
+      toast(err.message, 'error');
+    }
   };
-  document.getElementById('closeManageModal').addEventListener('click', () => document.getElementById('manageModal').classList.add('hidden'));
+  function closeManage() { document.getElementById('manageModal').classList.add('hidden'); loadCourses(); }
+  document.getElementById('closeManageModal').addEventListener('click', closeManage);
+  document.getElementById('doneManageBtn').addEventListener('click', closeManage);
 
-  const TYPE_LABEL = { lesson: 'Lesson', video: 'Video', quiz: 'Quiz' };
+  function renderStatusBar() {
+    const c = courses.find((x) => x.course_id === activeCourseId);
+    if (!c) return;
+    const pub = c.status === 'Published';
+    document.getElementById('manageTitle').textContent = `Manage: ${c.title}`;
+    document.getElementById('statusBar').innerHTML = `
+      <span>Status: <span class="badge ${statusBadgeClass(c.status)}">${escapeHtml(c.status)}</span>
+        <span class="text-muted">${pub ? 'Visible to supervisors and trainees' : 'Hidden from trainees until you publish it'}</span></span>
+      <button class="btn ${pub ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="setStatus('${pub ? 'Draft' : 'Published'}')">${pub ? 'Unpublish' : 'Publish'}</button>`;
+  }
+  window.setStatus = async function (status) {
+    const c = courses.find((x) => x.course_id === activeCourseId);
+    try {
+      await apiFetch(`/courses/${c.course_id}`, { method: 'PUT', body: JSON.stringify({
+        title: c.title, description: c.description, department_target: c.department_target, duration_hours: c.duration_hours, status }) });
+      await loadCourses();
+      renderStatusBar();
+      toast(status === 'Published' ? 'Training published' : 'Moved back to Draft');
+    } catch (err) { toast(err.message, 'error'); }
+  };
 
   async function loadDetail(id) {
-    const detail = await apiFetch(`/courses/${id}`);
-    document.getElementById('modulesList').innerHTML = detail.modules.length
-      ? detail.modules.map((m) => `
-          <div class="module-row">
-            <div class="flex-between">
-              <span><span class="type-badge type-${m.module_type}">${TYPE_LABEL[m.module_type]}</span> &nbsp;${escapeHtml(m.title)}${m.module_type === 'quiz' ? ` <span class="text-muted">(${m.question_count || 0} questions)</span>` : ''}</span>
-              <span style="white-space:nowrap;">
-                ${m.module_type === 'quiz' ? `<button class="btn btn-secondary btn-sm" onclick="toggleQuizPanel(${m.module_id})">Manage Questions</button>` : ''}
-                <button class="btn btn-danger btn-sm" onclick="deleteModule(${id}, ${m.module_id})">Remove</button>
-              </span>
-            </div>
-            ${m.module_type === 'quiz' ? `<div class="quiz-panel hidden" id="quizPanel-${m.module_id}"></div>` : ''}
-          </div>`).join('')
-      : '<p class="text-muted">No modules yet.</p>';
+    const [detail, enrollments] = await Promise.all([apiFetch(`/courses/${id}`), apiFetch(`/courses/${id}/enrollments`)]);
+    currentDetail = detail;
+    currentDetail.enrollments = enrollments;
+    renderStatusBar();
+    renderModules();
+    renderFacilitators();
+    renderEnrollments();
+    document.getElementById('tabBtn-modules').textContent = `Modules (${detail.modules.length})`;
+    document.getElementById('tabBtn-supervisors').textContent = `Supervisors (${detail.facilitators.length})`;
+    document.getElementById('tabBtn-trainees').textContent = `Trainees (${enrollments.length})`;
+    fillDropdowns();
+  }
+
+  function editFormHtml(m) {
+    return `<div class="quiz-panel">
+      <div class="form-group"><label>Title</label><input type="text" id="em_title" value="${escapeHtml(m.title)}"></div>
+      ${m.module_type === 'lesson' ? `<div class="form-group"><label>Content</label><textarea id="em_content">${escapeHtml(m.content || '')}</textarea></div>` : ''}
+      ${m.module_type === 'video' ? `<div class="form-group"><label>Video URL</label><input type="text" id="em_video" value="${escapeHtml(m.video_url || '')}"></div>` : ''}
+      ${m.module_type === 'quiz' ? `<div class="form-group"><label>Passing score (%)</label><input type="number" id="em_pass" min="0" max="100" value="${m.pass_percent || 70}"></div>` : ''}
+      <button class="btn btn-primary btn-sm" onclick="saveModule(${m.module_id})">Save changes</button>
+      <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">Cancel</button>
+    </div>`;
+  }
+
+  function renderModules() {
+    const mods = currentDetail.modules;
+    document.getElementById('modulesList').innerHTML = mods.length ? mods.map((m, i) => `
+      <div class="module-row">
+        <div class="flex-between">
+          <span><span class="type-badge type-${m.module_type}">${TYPE_LABEL[m.module_type]}</span> &nbsp;<strong>${i + 1}.</strong> ${escapeHtml(m.title)}${m.module_type === 'quiz' ? ` <span class="text-muted">(${m.question_count || 0} questions)</span>` : ''}</span>
+          <span style="white-space:nowrap;">
+            <button class="btn btn-secondary btn-sm icon-btn" title="Move up" ${i === 0 ? 'disabled' : ''} onclick="moveModule(${m.module_id}, -1)">↑</button>
+            <button class="btn btn-secondary btn-sm icon-btn" title="Move down" ${i === mods.length - 1 ? 'disabled' : ''} onclick="moveModule(${m.module_id}, 1)">↓</button>
+            ${m.module_type === 'quiz' ? `<button class="btn btn-secondary btn-sm" onclick="toggleQuizPanel(${m.module_id})">Questions</button>` : ''}
+            <button class="btn btn-secondary btn-sm" onclick="editModule(${m.module_id})">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteModule(${m.module_id})">Remove</button>
+          </span>
+        </div>
+        ${editingModuleId === m.module_id ? editFormHtml(m) : ''}
+        ${m.module_type === 'quiz' ? `<div class="quiz-panel hidden" id="quizPanel-${m.module_id}"></div>` : ''}
+      </div>`).join('') : '<div class="empty-state">No modules yet. Add the first lesson, video, or quiz below.</div>';
 
     openQuizPanels.forEach((moduleId) => {
       const panel = document.getElementById(`quizPanel-${moduleId}`);
       if (panel) { panel.classList.remove('hidden'); loadQuizPanel(moduleId); }
     });
-
-    document.getElementById('facilitatorsList').innerHTML = detail.facilitators.length
-      ? detail.facilitators.map((f) => `
-          <div class="flex-between" style="padding:10px 0; border-bottom:1px solid var(--border);">
-            <span>${escapeHtml(f.name)}</span>
-            <button class="btn btn-danger btn-sm" onclick="removeFacilitator(${id}, ${f.id})">Remove</button>
-          </div>`).join('')
-      : '<p class="text-muted">No supervisors assigned yet.</p>';
-
-    const enrollments = await apiFetch(`/courses/${id}/enrollments`);
-    document.getElementById('enrollmentsList').innerHTML = enrollments.length
-      ? enrollments.map((e) => `
-          <div class="flex-between" style="padding:10px 0; border-bottom:1px solid var(--border);">
-            <span>${escapeHtml(e.name)} — <span class="badge ${statusBadgeClass(e.status)}">${escapeHtml(e.status)}</span> (${e.progress}%)</span>
-            <button class="btn btn-danger btn-sm" onclick="removeEnrollment(${id}, ${e.user_id})">Remove</button>
-          </div>`).join('')
-      : '<p class="text-muted">No trainees enrolled yet.</p>';
   }
 
-  async function loadDropdowns(courseId) {
+  function renderFacilitators() {
+    const list = currentDetail.facilitators;
+    document.getElementById('facilitatorsList').innerHTML = list.length ? list.map((f) => `
+      <div class="flex-between" style="padding:10px 0; border-bottom:1px solid var(--border);">
+        <span>${escapeHtml(f.name)}</span>
+        <button class="btn btn-danger btn-sm" onclick="removeFacilitator(${f.id})">Remove</button>
+      </div>`).join('') : '<div class="empty-state">No supervisors assigned yet.</div>';
+  }
+
+  function renderEnrollments() {
+    const list = currentDetail.enrollments;
+    document.getElementById('enrollmentsList').innerHTML = list.length ? list.map((e) => `
+      <div class="flex-between" style="padding:10px 0; border-bottom:1px solid var(--border);">
+        <span>${escapeHtml(e.name)} — <span class="badge ${statusBadgeClass(e.status)}">${escapeHtml(e.status)}</span> (${e.progress}%)</span>
+        <span style="white-space:nowrap;">
+          ${e.status === 'Pending Request' ? `<button class="btn btn-primary btn-sm" onclick="approveEnrollment(${e.user_id})">Approve</button>` : ''}
+          <button class="btn btn-danger btn-sm" onclick="removeEnrollment(${e.user_id})">${e.status === 'Pending Request' ? 'Decline' : 'Remove'}</button>
+        </span>
+      </div>`).join('') : '<div class="empty-state">No trainees enrolled yet.</div>';
+  }
+
+  async function loadDropdowns() {
     if (allSupervisors.length === 0) allSupervisors = await apiFetch('/users?role=Supervisor');
     if (allTrainees.length === 0) allTrainees = await apiFetch('/users?role=Trainee');
-    document.getElementById('f_supervisor_select').innerHTML = allSupervisors.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('') || '<option value="">No supervisors yet</option>';
-    document.getElementById('e_trainee_select').innerHTML = allTrainees.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('') || '<option value="">No trainees yet</option>';
+  }
+  function fillDropdowns() {
+    const assigned = currentDetail.facilitators.map((f) => f.id);
+    const enrolled = currentDetail.enrollments.map((e) => e.user_id);
+    const sup = allSupervisors.filter((s) => !assigned.includes(s.id));
+    const tr = allTrainees.filter((t) => !enrolled.includes(t.id));
+    document.getElementById('f_supervisor_select').innerHTML = sup.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('') || '<option value="">Everyone is already assigned</option>';
+    document.getElementById('e_trainee_select').innerHTML = tr.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('') || '<option value="">Everyone is already enrolled</option>';
   }
 
-  window.deleteModule = async function (courseId, moduleId) {
+  async function putModule(m, overrides) {
+    await apiFetch(`/courses/${activeCourseId}/modules/${m.module_id}`, { method: 'PUT', body: JSON.stringify({
+      title: m.title, module_type: m.module_type, content: m.content, video_url: m.video_url,
+      pass_percent: m.pass_percent, sort_order: m.sort_order, ...overrides }) });
+  }
+  window.editModule = function (mid) { editingModuleId = mid; renderModules(); };
+  window.cancelEdit = function () { editingModuleId = null; renderModules(); };
+  window.saveModule = async function (mid) {
+    const m = currentDetail.modules.find((x) => x.module_id === mid);
+    const title = document.getElementById('em_title').value.trim();
+    if (!title) { toast('Title is required', 'error'); return; }
+    const o = { title };
+    if (m.module_type === 'lesson') o.content = document.getElementById('em_content').value.trim();
+    if (m.module_type === 'video') o.video_url = document.getElementById('em_video').value.trim();
+    if (m.module_type === 'quiz') o.pass_percent = parseInt(document.getElementById('em_pass').value, 10) || 70;
+    try {
+      await putModule(m, o);
+      editingModuleId = null;
+      await loadDetail(activeCourseId);
+      toast('Module saved');
+    } catch (err) { toast(err.message, 'error'); }
+  };
+  window.moveModule = async function (mid, dir) {
+    const mods = currentDetail.modules.slice();
+    const i = mods.findIndex((m) => m.module_id === mid), j = i + dir;
+    if (j < 0 || j >= mods.length) return;
+    [mods[i], mods[j]] = [mods[j], mods[i]];
+    try {
+      await Promise.all(mods.map((m, idx) => (m.sort_order === idx + 1 ? null : putModule(m, { sort_order: idx + 1 }))).filter(Boolean));
+      await loadDetail(activeCourseId);
+      toast('Order saved');
+    } catch (err) { toast(err.message, 'error'); }
+  };
+
+  window.deleteModule = async function (moduleId) {
     if (!confirm('Remove this module? Any quiz questions inside it go too.')) return;
-    await apiFetch(`/courses/${courseId}/modules/${moduleId}`, { method: 'DELETE' });
-    openQuizPanels.delete(moduleId);
-    loadDetail(courseId);
+    try {
+      await apiFetch(`/courses/${activeCourseId}/modules/${moduleId}`, { method: 'DELETE' });
+      openQuizPanels.delete(moduleId);
+      await loadDetail(activeCourseId);
+      toast('Module removed');
+    } catch (err) { toast(err.message, 'error'); }
   };
-  window.removeFacilitator = async function (courseId, supervisorId) {
-    await apiFetch(`/courses/${courseId}/facilitators/${supervisorId}`, { method: 'DELETE' });
-    loadDetail(courseId);
+  window.removeFacilitator = async function (supervisorId) {
+    try {
+      await apiFetch(`/courses/${activeCourseId}/facilitators/${supervisorId}`, { method: 'DELETE' });
+      await loadDetail(activeCourseId);
+      toast('Supervisor removed');
+    } catch (err) { toast(err.message, 'error'); }
   };
-  window.removeEnrollment = async function (courseId, userId) {
-    await apiFetch(`/courses/${courseId}/enroll/${userId}`, { method: 'DELETE' });
-    loadDetail(courseId);
-    loadCourses();
+  window.removeEnrollment = async function (userId) {
+    try {
+      await apiFetch(`/courses/${activeCourseId}/enroll/${userId}`, { method: 'DELETE' });
+      await loadDetail(activeCourseId);
+      toast('Removed');
+    } catch (err) { toast(err.message, 'error'); }
+  };
+  window.approveEnrollment = async function (userId) {
+    try {
+      await apiFetch(`/courses/${activeCourseId}/enroll/${userId}`, { method: 'PUT', body: JSON.stringify({ progress: 0, status: 'Enrolled' }) });
+      await loadDetail(activeCourseId);
+      toast('Trainee approved');
+    } catch (err) { toast(err.message, 'error'); }
   };
 
   function updateModuleTypeFields() {
@@ -338,8 +468,9 @@
       await apiFetch(`/courses/${activeCourseId}/modules`, { method: 'POST', body: JSON.stringify(payload) });
       document.getElementById('moduleForm').reset();
       updateModuleTypeFields();
-      loadDetail(activeCourseId);
-    } catch (err) { showAlert(document.getElementById('manageAlert'), err.message); }
+      await loadDetail(activeCourseId);
+      toast('Module saved');
+    } catch (err) { toast(err.message, 'error'); }
   });
 
   window.toggleQuizPanel = function (moduleId) {
@@ -383,7 +514,7 @@
                 <input type="text" class="qf-choice-text" placeholder="Choice ${i + 1}${i >= 2 ? ' (optional)' : ''}">
               </div>`).join('')}
           </div>
-          <button type="button" class="btn btn-secondary btn-sm mt-8" onclick="addQuestion(${moduleId})">+ Add Question</button>
+          <button type="button" class="btn btn-secondary btn-sm mt-8" onclick="addQuestion(${moduleId})">Save Question</button>
         </div>`;
     } catch (err) {
       panel.innerHTML = `<p class="text-muted">Could not load questions: ${escapeHtml(err.message)}</p>`;
@@ -396,14 +527,14 @@
     const choiceInputs = Array.from(panel.querySelectorAll('.qf-choice'));
     const correctIndex = parseInt(panel.querySelector(`input[name="correct-${moduleId}"]:checked`).value, 10);
 
-    if (!questionText) { showAlert(document.getElementById('manageAlert'), 'Write the question text first.'); return; }
+    if (!questionText) { toast('Write the question text first.', 'error'); return; }
 
     const choices = choiceInputs
       .map((row, i) => ({ text: row.querySelector('.qf-choice-text').value.trim(), is_correct: i === correctIndex }))
       .filter((c) => c.text);
 
-    if (choices.length < 2) { showAlert(document.getElementById('manageAlert'), 'Provide at least 2 answer choices.'); return; }
-    if (!choices.some((c) => c.is_correct)) { showAlert(document.getElementById('manageAlert'), 'The selected correct choice is empty — fill it in.'); return; }
+    if (choices.length < 2) { toast('Provide at least 2 answer choices.', 'error'); return; }
+    if (!choices.some((c) => c.is_correct)) { toast('The selected correct choice is empty — fill it in.', 'error'); return; }
 
     try {
       await apiFetch('/quiz/questions', {
@@ -412,8 +543,9 @@
       });
       loadQuizPanel(moduleId);
       loadDetail(activeCourseId);
+      toast('Saved');
     } catch (err) {
-      showAlert(document.getElementById('manageAlert'), err.message);
+      toast(err.message, 'error');
     }
   };
 
@@ -422,8 +554,9 @@
       await apiFetch(`/quiz/questions/${questionId}`, { method: 'DELETE' });
       loadQuizPanel(moduleId);
       loadDetail(activeCourseId);
+      toast('Saved');
     } catch (err) {
-      showAlert(document.getElementById('manageAlert'), err.message);
+      toast(err.message, 'error');
     }
   };
 
@@ -433,8 +566,9 @@
     if (!supervisor_id) return;
     try {
       await apiFetch(`/courses/${activeCourseId}/facilitators`, { method: 'POST', body: JSON.stringify({ supervisor_id }) });
-      loadDetail(activeCourseId);
-    } catch (err) { showAlert(document.getElementById('manageAlert'), err.message); }
+      await loadDetail(activeCourseId);
+      toast('Supervisor assigned');
+    } catch (err) { toast(err.message, 'error'); }
   });
 
   document.getElementById('enrollForm').addEventListener('submit', async (e) => {
@@ -443,9 +577,9 @@
     if (!user_id) return;
     try {
       await apiFetch(`/courses/${activeCourseId}/enroll`, { method: 'POST', body: JSON.stringify({ user_id }) });
-      loadDetail(activeCourseId);
-      loadCourses();
-    } catch (err) { showAlert(document.getElementById('manageAlert'), err.message); }
+      await loadDetail(activeCourseId);
+      toast('Trainee enrolled');
+    } catch (err) { toast(err.message, 'error'); }
   });
 
   loadCourses();

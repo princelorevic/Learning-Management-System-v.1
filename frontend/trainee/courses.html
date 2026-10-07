@@ -99,10 +99,10 @@
         </div>
         <div class="progress-track mb-16"><div class="progress-fill" style="width:${e.progress}%;"></div></div>
         <div class="flex-between">
-          <span class="text-muted">${e.progress}% complete</span>
-          <button class="btn btn-secondary btn-sm" onclick="openCourse(${e.course_id})">Open</button>
+          <span class="text-muted">${e.status === 'Pending Request' ? 'Request sent' : e.progress + '% complete'}</span>
+          ${e.status === 'Pending Request' ? '<span class="text-muted">Waiting for approval</span>' : `<button class="btn btn-primary btn-sm" onclick="openCourse(${e.course_id})">Open</button>`}
         </div>
-      </div>`).join('') : '<p class="text-muted">Nothing yet — join a training below.</p>';
+      </div>`).join('') : '<div class="empty-state card">You are not in any training yet. Join one from the list below, or wait for your supervisor to enroll you.</div>';
   }
 
   function renderAvailable() {
@@ -116,12 +116,13 @@
           </div>
           <button class="btn btn-primary btn-sm" onclick="requestEnroll(${c.course_id})">Request to Join</button>
         </div>
-      </div>`).join('') : '<p class="text-muted">No other trainings published right now.</p>';
+      </div>`).join('') : '<div class="empty-state card">No other trainings are published right now. Check back later.</div>';
   }
 
   window.requestEnroll = async function (courseId) {
     try {
       await apiFetch(`/courses/${courseId}/request-enroll`, { method: 'POST' });
+      toast('Request sent. Waiting for approval.');
       loadAll();
     } catch (err) {
       showAlert(document.getElementById('alertBox'), err.message);
@@ -159,7 +160,9 @@
 
   window.openCourse = async function (courseId) {
     activeCourseId = courseId;
-    const detail = await apiFetch(`/courses/${courseId}`);
+    let detail;
+    try { detail = await apiFetch(`/courses/${courseId}`); }
+    catch (err) { toast(err.message, 'error'); return; }
     document.getElementById('viewTitle').textContent = detail.title;
     document.getElementById('viewDescription').textContent = detail.description || '';
 
@@ -174,24 +177,24 @@
     }
 
     document.getElementById('viewModules').innerHTML = detail.modules.length
-      ? detail.modules.map((m) => `
+      ? detail.modules.map((m, i) => `
           <div class="module-block">
-            <strong>${escapeHtml(m.title)}</strong>
+            <strong>${i + 1}. ${escapeHtml(m.title)}</strong>
             <div class="mt-8">${renderModuleContent(m)}</div>
           </div>`).join('')
-      : '<p class="text-muted">No content added yet.</p>';
+      : '<div class="empty-state">No content added yet. Check back soon.</div>';
 
     const enrollment = detail.myEnrollment;
-    if (enrollment) {
+    if (enrollment && enrollment.status !== 'Pending Request') {
       document.getElementById('progressSection').innerHTML = `
         <h3 class="mb-16">My progress</h3>
         <div class="progress-track mb-16"><div class="progress-fill" style="width:${enrollment.progress}%;"></div></div>
         <div class="form-row" style="align-items:end;">
           <div class="form-group" style="margin-bottom:0;"><label>Update progress (%)</label><input type="number" min="0" max="100" id="progressInput" value="${enrollment.progress}"></div>
-          <button class="btn btn-primary" onclick="updateMyProgress(${courseId})">Save</button>
+          <button class="btn btn-primary" onclick="updateMyProgress(${courseId})">Save Progress</button>
         </div>`;
     } else {
-      document.getElementById('progressSection').innerHTML = '<p class="text-muted">Your enrollment request is pending approval.</p>';
+      document.getElementById('progressSection').innerHTML = (enrollment ? '<p class="text-muted">Your request is pending approval.</p>' : '<p class="text-muted">You are not enrolled in this training.</p>');
     }
     document.getElementById('viewModal').classList.remove('hidden');
   };
@@ -201,9 +204,10 @@
     try {
       await apiFetch(`/courses/${courseId}/enroll/${getUser().id}`, { method: 'PUT', body: JSON.stringify({ progress: Number(progress) }) });
       document.getElementById('viewModal').classList.add('hidden');
+      toast('Progress saved');
       loadAll();
     } catch (err) {
-      showAlert(document.getElementById('viewAlert'), err.message);
+      toast(err.message, 'error');
     }
   };
 
