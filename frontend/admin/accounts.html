@@ -56,8 +56,8 @@
 
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Department</th><th>Supervisor</th><th>Status</th><th></th></tr></thead>
-          <tbody id="usersTable"><tr><td colspan="7" class="text-muted">Loading…</td></tr></tbody>
+          <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Department</th><th>Supervisor</th><th>Status</th><th>KPI Agent</th><th></th></tr></thead>
+          <tbody id="usersTable"><tr><td colspan="8" class="text-muted">Loading…</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -127,6 +127,11 @@
         <p class="text-muted mt-8" style="font-size:12px;">
         <a href="https://gemini.google.com/gems/create" target="_blank" rel="noopener">Create a new Gem in Gemini ↗</a> — then paste the share link above. </p>
       </div>
+      <div class="form-group" id="kpiLinkField">
+        <label>KPI Agent link</label>
+        <input type="text" id="f_kpi_link" placeholder="https://gemini.google.com/gem/...">
+        <p class="text-muted mt-8" style="font-size:12px;">The trainee's KPI agent. This link shows in the Accounts table and in the supervisor's team table so they can open it.</p>
+      </div>
       <div class="form-group" id="statusField">
         <label>Status</label>
         <select id="f_status">
@@ -187,7 +192,7 @@
   function renderUsers() {
     const tbody = document.getElementById('usersTable');
     if (allUsers.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-muted">No accounts found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="text-muted">No accounts found.</td></tr>';
       return;
     }
     tbody.innerHTML = allUsers.map((u) => `
@@ -198,6 +203,7 @@
         <td>${escapeHtml(u.department || '—')}</td>
         <td>${escapeHtml(u.supervisor_name || '—')}</td>
         <td><span class="badge ${statusBadgeClass(u.status)}">${escapeHtml(u.status)}</span></td>
+        <td>${u.role === 'Trainee' && /^https?:\/\//i.test(u.kpi_agent_link || '') ? `<a href="${escapeHtml(u.kpi_agent_link)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Open ↗</a>` : '<span class="text-muted">—</span>'}</td>
         <td style="text-align:right; white-space:nowrap;">
           <button class="btn btn-secondary btn-sm" onclick="openEditModal(${u.id})">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="openDeleteModal(${u.id})">Delete</button>
@@ -235,6 +241,7 @@ document.getElementById('learningStyleChips').addEventListener('change', (e) => 
     const role = document.getElementById('f_role').value;
     document.getElementById('supervisorField').style.display = role === 'Trainee' ? 'block' : 'none';
     document.getElementById('gemLinkField').style.display = role === 'Trainee' ? 'block' : 'none';
+    document.getElementById('kpiLinkField').style.display = role === 'Trainee' ? 'block' : 'none';
     document.getElementById('learningStyleField').style.display = role === 'Trainee' ? 'block' : 'none';
   }
   document.getElementById('f_role').addEventListener('change', toggleFieldsForRole);
@@ -264,6 +271,8 @@ document.getElementById('learningStyleChips').addEventListener('change', (e) => 
     document.getElementById('f_department').value = u.department || '';
     document.getElementById('f_supervisor_id').value = u.supervisor_id || '';
     setLearningStyles(u.learning_style);
+    document.getElementById('f_gem_link').value = u.gem_link || '';
+    document.getElementById('f_kpi_link').value = u.kpi_agent_link || '';
     document.getElementById('f_status').value = u.status;
     document.getElementById('f_password').required = false;
     document.getElementById('passwordLabel').textContent = 'Password';
@@ -306,6 +315,7 @@ document.getElementById('learningStyleChips').addEventListener('change', (e) => 
       supervisor_id: document.getElementById('f_supervisor_id').value || null,
       learning_style: getLearningStyles(),
       gem_link: document.getElementById('f_gem_link').value.trim(),
+      kpi_agent_link: document.getElementById('f_kpi_link').value.trim(),
       status: document.getElementById('f_status').value
     };
     const password = document.getElementById('f_password').value;

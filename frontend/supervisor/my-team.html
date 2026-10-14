@@ -33,8 +33,8 @@
       <div id="alertBox" class="hidden"></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Name</th><th>Department</th><th>Learning Style</th><th>Trainings Enrolled</th><th>Completed</th></tr></thead>
-          <tbody id="teamTable"><tr><td colspan="5" class="text-muted">Loading…</td></tr></tbody>
+          <thead><tr><th>Name</th><th>Department</th><th>Learning Style</th><th>Trainings Enrolled</th><th>Completed</th><th>KPI Agent</th></tr></thead>
+          <tbody id="teamTable"><tr><td colspan="6" class="text-muted">Loading…</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -56,8 +56,9 @@
               <td>${escapeHtml(t.learning_style || 'Not Assessed')}</td>
               <td>${t.enrolled_count}</td>
               <td>${t.completed_count}</td>
+              <td>${/^https?:\/\//i.test(t.kpi_agent_link || '') ? `<a href="${escapeHtml(t.kpi_agent_link)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Open ↗</a>` : '<span class="text-muted">—</span>'}</td>
             </tr>`).join('')
-        : '<tr><td colspan="5" class="text-muted">No trainees assigned to you yet.</td></tr>';
+        : '<tr><td colspan="6" class="text-muted">No trainees assigned to you yet.</td></tr>';
     } catch (err) {
       showAlert(document.getElementById('alertBox'), err.message);
     }
