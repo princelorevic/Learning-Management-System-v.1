@@ -183,6 +183,7 @@
         <td>${c.enrolled_count}</td>
         <td>${c.completed_count}</td>
         <td style="text-align:right; white-space:nowrap;">
+          <button class="btn btn-primary btn-sm" onclick="location.href='course-builder.html?id=${c.course_id}'">Edit Content</button>
           <button class="btn btn-secondary btn-sm" onclick="openManageModal(${c.course_id})">Manage</button>
           <button class="btn btn-secondary btn-sm" onclick="openEditCourse(${c.course_id})">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="deleteCourse(${c.course_id})">Delete</button>
