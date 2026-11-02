@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="stylesheet" href="../assets/css/course-ui.css">
+<style>
+  html, body { height: 100%; }
+  body { overflow: hidden; background: var(--surface-light); display: flex; flex-direction: column; }
+  button { font-family: inherit; }
+  .lr { display: flex; flex: 1; min-height: 0; }
+  .lr-side { width: 320px; flex: none; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .lr-side-head { padding: 16px; border-bottom: 1px solid var(--border); }
+  .lr-back { font-size: 13px; color: var(--text-muted); text-decoration: none; }
+  .lr-back:hover { color: var(--primary); }
+  .lr-title { font-size: 16px; font-weight: 700; margin: 8px 0 10px; line-height: 1.3; }
+  .lr-prog-text { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-muted); margin-bottom: 6px; }
+  .lr-list { flex: 1; overflow-y: auto; padding: 8px 0 24px; }
+  .lr-sec { padding: 14px 16px 6px; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: var(--text-light); }
+  .lr-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 16px; background: none; border: 0; border-left: 3px solid transparent; text-align: left; cursor: pointer; font-size: 14px; color: var(--text-main); }
+  .lr-item:hover { background: var(--surface-light); }
+  .lr-item.active { background: var(--primary-light); border-left-color: var(--primary); font-weight: 600; }
+  .lr-item .lr-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .lr-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-hover); flex: none; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
+  .lr-check.done { background: #10b981; border-color: #10b981; }
+  .lr-main { flex: 1; overflow-y: auto; }
+  .lr-wrap { max-width: 1040px; margin: 0 auto; padding: 24px 28px 60px; }
+  .lr-banner { display: flex; gap: 18px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px; margin-bottom: 22px; }
+  .lr-banner img { width: 140px; height: 88px; object-fit: cover; border-radius: var(--radius-sm); flex: none; }
+  .lr-banner h1 { margin: 0 0 6px; font-size: 22px; }
+  .lr-unit-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .lr-unit-head h2 { margin: 0; font-size: 22px; }
+  .lr-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 22px; margin-bottom: 18px; }
+  .lr-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+  .lr-q { margin-bottom: 20px; }
+  .lr-q strong { display: block; margin-bottom: 8px; }
+  .lr-opt { display: flex; align-items: center; gap: 8px; padding: 7px 0; font-size: 15px; }
+  .lr-preview { background: #fef3c7; color: #92400e; font-size: 13px; text-align: center; padding: 6px; }
+  .lr-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 14px; z-index: 50; }
+  .lr-toast.err { background: #b91c1c; }
+  .lr-menu { display: none; }
+  @media (max-width: 800px) {
+    body { overflow: auto; }
+    .lr { flex-direction: column; height: auto; }
+    .lr-side { width: 100%; max-height: 260px; border-right: 0; border-bottom: 1px solid var(--border); }
+    .lr-wrap { padding: 16px; }
+    .lr-banner { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div id="previewBar" class="lr-preview hidden">Preview mode — you are seeing this training as a trainee would. Nothing you do here is saved.</div>
+<div class="lr">
+  <aside class="lr-side">
+    <div class="lr-side-head">
+      <a class="lr-back" id="backLink" href="courses.html">← Back</a>
+      <div class="lr-title" id="sideTitle">Loading…</div>
+      <div id="progWrap">
+        <div class="lr-prog-text"><span id="progText"></span><span id="progPct"></span></div>
+        <div class="progress-track"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="lr-list" id="unitList"></div>
+  </aside>
+  <main class="lr-main" id="mainPane">
+    <div class="lr-wrap" id="mainContent"><p class="text-muted">Loading…</p></div>
+  </main>
+</div>
+<span id="currentUserName" class="hidden"></span><span id="currentUserRole" class="hidden"></span><button id="logoutBtn" class="hidden"></button>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/course-render.js"></script>
+<script>
+  const me = requireAuth(['Trainee', 'Admin', 'Supervisor']);
+  const params = new URLSearchParams(location.search);
+  const courseId = params.get('id');
+  const isTrainee = me && me.role === 'Trainee';
+  const preview = !isTrainee || params.get('preview') === '1';
+  const { esc, escAttr, typeInfo } = CourseRender;
+
+  let outline = null, units = [], current = null;
+
+  function toast(msg, err) {
+    const t = document.createElement('div');
+    t.className = 'lr-toast' + (err ? ' err' : '');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+  }
+
+  const isSection = (u) => u.module_type === 'section';
+  const playable = () => units.filter((u) => !isSection(u));
+
+  async function load(keepId) {
+    try {
+      outline = await apiFetch('/builder/courses/' + encodeURIComponent(courseId) + '/outline');
+    } catch (e) {
+      document.getElementById('mainContent').innerHTML = '<div class="lr-card"><h3>Cannot open this training</h3><p class="text-muted">' + esc(e.message) + '</p><a class="btn btn-secondary" href="courses.html">Back to My Courses</a></div>';
+      document.getElementById('sideTitle').textContent = 'Training';
+      return;
+    }
+    units = outline.units;
+    document.title = outline.course.title + ' — Enterprise LMS';
+    document.getElementById('sideTitle').textContent = outline.course.title;
+    renderSide();
+    const want = keepId || params.get('unit');
+    const target = units.find((u) => String(u.module_id) === String(want) && !isSection(u));
+    if (target) openUnit(target.module_id);
+    else if (!keepId) showIntro();
+  }
+
+  function pct() {
+    const p = playable();
+    if (!p.length) return 0;
+    if (preview) return 0;
+    return Math.round((p.filter((u) => u.completed).length / p.length) * 100);
+  }
+
+  function renderSide() {
+    const p = playable();
+    const done = preview ? 0 : p.filter((u) => u.completed).length;
+    document.getElementById('progText').textContent = done + ' of ' + p.length + ' done';
+    document.getElementById('progPct').textContent = pct() + '%';
+    document.getElementById('progFill').style.width = pct() + '%';
+    document.getElementById('progWrap').classList.toggle('hidden', preview);
+
+    document.getElementById('unitList').innerHTML = units.map((u) => {
+      if (isSection(u)) return '<div class="lr-sec">' + esc(u.title) + '</div>';
+      const t = typeInfo(u.module_type);
+      const active = current && current.module_id === u.module_id ? ' active' : '';
+      return '<button class="lr-item' + active + '" data-id="' + u.module_id + '">' +
+        '<span class="ti ti-' + u.module_type + '">' + esc(t.icon) + '</span>' +
+        '<span class="lr-name">' + esc(u.title) + '</span>' +
+        (preview ? '' : '<span class="lr-check' + (u.completed ? ' done' : '') + '">' + (u.completed ? '✓' : '') + '</span>') +
+        '</button>';
+    }).join('') || '<p class="text-muted" style="padding:16px;">No content has been added yet.</p>';
+    document.querySelectorAll('.lr-item').forEach((b) => b.addEventListener('click', () => openUnit(b.dataset.id)));
+  }
+
+  function showIntro() {
+    current = null;
+    renderSide();
+    const c = outline.course;
+    const first = playable()[0];
+    document.getElementById('mainContent').innerHTML =
+      '<div class="lr-banner">' +
+        (c.image_url ? '<img src="' + escAttr(c.image_url) + '" alt="">' : '') +
+        '<div><h1>' + esc(c.title) + '</h1><p class="text-muted" style="margin:0;">' +
+        (c.duration_hours ? esc(c.duration_hours) + ' hour(s) · ' : '') + playable().length + ' unit(s)</p></div>' +
+      '</div>' +
+      (c.description ? '<div class="lr-card"><div class="cr-text">' + CourseRender.textHtml(c.description) + '</div></div>' : '') +
+      (first
+        ? '<button class="btn btn-primary" id="startBtn">' + (!preview && pct() > 0 ? 'Continue' : 'Start training') + ' →</button>'
+        : '<div class="cr-empty">The trainer has not added any content yet.</div>');
+    const sb = document.getElementById('startBtn');
+    if (sb) sb.onclick = () => {
+      const next = (!preview && playable().find((u) => !u.completed)) || first;
+      openUnit(next.module_id);
+    };
+    document.getElementById('mainPane').scrollTop = 0;
+  }
+
+  async function openUnit(id) {
+    current = units.find((u) => String(u.module_id) === String(id));
+    if (!current) return;
+    renderSide();
+    const u = current, t = typeInfo(u.module_type);
+    const el = document.getElementById('mainContent');
+    el.innerHTML =
+      '<div class="lr-unit-head"><span class="ti ti-' + u.module_type + '" style="width:40px;height:40px;font-size:20px;">' + esc(t.icon) + '</span>' +
+      '<div><div class="text-muted" style="font-size:12.5px;">' + esc(t.label) + '</div><h2>' + esc(u.title) + '</h2></div></div>' +
+      '<div id="unitBody"></div><div id="unitFoot"></div>';
+    document.getElementById('mainPane').scrollTop = 0;
+    history.replaceState(null, '', location.pathname + '?' + new URLSearchParams({ id: courseId, unit: u.module_id, ...(params.get('preview') ? { preview: '1' } : {}) }));
+
+    const body = document.getElementById('unitBody');
+    try {
+      if (u.module_type === 'quiz') await renderQuiz(body, u);
+      else if (u.module_type === 'survey') await renderSurvey(body, u);
+      else if (u.module_type === 'assignment') await renderAssignment(body, u);
+      else body.innerHTML = CourseRender.bodyHtml(u);
+    } catch (e) {
+      body.innerHTML = '<div class="cr-note cr-note-warn">' + esc(e.message) + '</div>';
+    }
+    renderFoot();
+  }
+
+  const AUTO = ['quiz', 'survey', 'assignment'];
+
+  function renderFoot() {
+    const u = current, list = playable(), i = list.findIndex((x) => x.module_id === u.module_id);
+    const prev = list[i - 1], next = list[i + 1];
+    let mid = '';
+    if (!preview) {
+      if (u.completed) mid = '<span class="badge badge-success">✓ Completed</span>';
+      else if (!AUTO.includes(u.module_type)) mid = '<button class="btn btn-primary" id="doneBtn">Mark as complete ✓</button>';
+    }
+    document.getElementById('unitFoot').innerHTML =
+      '<div class="lr-nav"><div>' + (prev ? '<button class="btn btn-secondary" id="prevBtn">← Previous</button>' : '') + '</div>' +
+      '<div>' + mid + '</div>' +
+      '<div>' + (next ? '<button class="btn btn-secondary" id="nextBtn">Next →</button>' : '') + '</div></div>';
+    const go = (x) => () => openUnit(x.module_id);
+    if (prev) document.getElementById('prevBtn').onclick = go(prev);
+    if (next) document.getElementById('nextBtn').onclick = go(next);
+    const d = document.getElementById('doneBtn');
+    if (d) d.onclick = async () => {
+      d.disabled = true;
+      try {
+        await completeUnit(u);
+        toast('Unit completed');
+        if (next) openUnit(next.module_id);
+      } catch (e) { toast(e.message, true); d.disabled = false; }
+    };
+  }
+
+  async function completeUnit(u) {
+    if (preview) return;
+    const r = await apiFetch('/builder/units/' + u.module_id + '/complete', { method: 'POST', body: '{}' });
+    u.completed = true;
+    renderSide();
+    renderFoot();
+    if (r && r.progress >= 100) toast('🎉 Training complete! Your certificate is ready.');
+  }
+
+  function markDoneLocal(u) { u.completed = true; renderSide(); renderFoot(); }
+
+  // ---------------- test ----------------
+  async function renderQuiz(body, u) {
+    const q = await apiFetch('/quiz/' + u.content_id);
+    if (!q.questions.length) { body.innerHTML = '<div class="cr-empty">No questions have been added yet.</div>'; return; }
+    const last = q.myLatestAttempt;
+    const lastNote = !preview && last
+      ? '<div class="cr-note ' + (last.passed ? 'cr-note-ok' : 'cr-note-warn') + '">Last attempt: ' + last.score + '/' + last.total_questions + ' — ' + (last.passed ? 'Passed' : 'Not passed') + '</div>' : '';
+    body.innerHTML = '<div class="lr-card">' + lastNote +
+      '<p class="text-muted">Passing score: ' + esc(q.pass_percent) + '%. You can retake the test.</p>' +
+      q.questions.map((qq, n) =>
+        '<div class="lr-q"><strong>' + (n + 1) + '. ' + esc(qq.question_text) + '</strong>' +
+        qq.choices.map((c) => '<label class="lr-opt"><input type="radio" name="q' + qq.question_id + '" value="' + c.choice_id + '"> <span>' + esc(c.choice_text) + '</span></label>').join('') + '</div>').join('') +
+      (preview ? '<p class="text-muted">Submitting is disabled in preview.</p>' : '<button class="btn btn-primary" id="quizSubmit">Submit answers</button>') +
+      '<div id="quizResult"></div></div>';
+    const btn = document.getElementById('quizSubmit');
+    if (!btn) return;
+    btn.onclick = async () => {
+      const answers = {};
+      q.questions.forEach((qq) => { const c = body.querySelector('input[name="q' + qq.question_id + '"]:checked'); if (c) answers[qq.question_id] = c.value; });
+      if (Object.keys(answers).length < q.questions.length && !confirm('Some questions are not answered. Submit anyway?')) return;
+      btn.disabled = true;
+      try {
+        const r = await apiFetch('/quiz/' + u.content_id + '/submit', { method: 'POST', body: JSON.stringify({ answers }) });
+        document.getElementById('quizResult').innerHTML =
+          '<div class="cr-note ' + (r.passed ? 'cr-note-ok' : 'cr-note-warn') + '"><strong>' + r.score + ' / ' + r.total + ' (' + r.percent + '%)</strong> — ' +
+          (r.passed ? 'You passed!' : 'Not passed yet. You need ' + r.pass_percent + '%. Review and try again.') + '</div>';
+        if (r.passed && !u.completed) { await completeUnit(u); }
+      } catch (e) { toast(e.message, true); }
+      btn.disabled = false;
+    };
+  }
+
+  // ---------------- survey ----------------
+  async function renderSurvey(body, u) {
+    const qs = (u.settings && u.settings.questions) || [];
+    if (!qs.length) { body.innerHTML = '<div class="cr-empty">No questions have been added yet.</div>'; return; }
+    let mine = null;
+    if (!preview) mine = (await apiFetch('/builder/units/' + u.module_id + '/activity')).mine;
+    const a = (mine && mine.answers) || {};
+    body.innerHTML = '<div class="lr-card">' +
+      (mine ? '<div class="cr-note cr-note-ok">You already answered this survey. You can update your answers.</div>' : '') +
+      qs.map((q, n) => {
+        const label = '<strong>' + (n + 1) + '. ' + esc(q.text) + (q.required ? ' <span style="color:#b91c1c">*</span>' : '') + '</strong>';
+        let input;
+        if (q.type === 'text') input = '<textarea class="sv" data-q="' + q.id + '" rows="3" style="width:100%">' + esc(a[q.id] || '') + '</textarea>';
+        else if (q.type === 'rating') input = '<div>' + [1, 2, 3, 4, 5].map((r) => '<label class="lr-opt" style="display:inline-flex;margin-right:14px;"><input type="radio" name="s' + q.id + '" value="' + r + '"' + (Number(a[q.id]) === r ? ' checked' : '') + '> ' + r + ' ★</label>').join('') + '</div>';
+        else input = q.options.map((o) => '<label class="lr-opt"><input type="radio" name="s' + q.id + '" value="' + escAttr(o) + '"' + (a[q.id] === o ? ' checked' : '') + '> <span>' + esc(o) + '</span></label>').join('');
+        return '<div class="lr-q">' + label + input + '</div>';
+      }).join('') +
+      (preview ? '<p class="text-muted">Submitting is disabled in preview.</p>' : '<button class="btn btn-primary" id="svSubmit">' + (mine ? 'Update answers' : 'Submit survey') + '</button>') + '</div>';
+    const btn = document.getElementById('svSubmit');
+    if (!btn) return;
+    btn.onclick = async () => {
+      const answers = {};
+      qs.forEach((q) => {
+        if (q.type === 'text') answers[q.id] = (body.querySelector('textarea[data-q="' + q.id + '"]') || {}).value || '';
+        else { const c = body.querySelector('input[name="s' + q.id + '"]:checked'); answers[q.id] = c ? c.value : ''; }
+      });
+      btn.disabled = true;
+      try {
+        await apiFetch('/builder/units/' + u.module_id + '/survey', { method: 'POST', body: JSON.stringify({ answers }) });
+        toast('Thanks! Your answers were saved.');
+        markDoneLocal(u);
+        renderSurvey(body, u);
+      } catch (e) { toast(e.message, true); btn.disabled = false; }
+    };
+  }
+
+  // ---------------- assignment ----------------
+  async function renderAssignment(body, u) {
+    const due = u.settings && u.settings.due_date;
+    let mine = null;
+    if (!preview) mine = (await apiFetch('/builder/units/' + u.module_id + '/activity')).mine;
+    const statusNote = mine
+      ? '<div class="cr-note ' + (mine.status === 'Approved' ? 'cr-note-ok' : mine.status === 'Needs revision' ? 'cr-note-warn' : 'cr-note-info') + '">Status: <strong>' + esc(mine.status) + '</strong>' +
+        (mine.feedback ? '<br>Trainer feedback: ' + esc(mine.feedback) : '') + '</div>' : '';
+    body.innerHTML =
+      (u.content ? '<div class="lr-card"><div class="cr-text">' + CourseRender.textHtml(u.content) + '</div></div>' : '') +
+      '<div class="lr-card">' + (due ? '<p class="text-muted">Due: ' + esc(due) + '</p>' : '') + statusNote +
+      '<div class="form-group"><label>Your answer</label><textarea id="asText" rows="6" style="width:100%">' + esc((mine && mine.content) || '') + '</textarea></div>' +
+      '<div class="form-group"><label>Link (optional)</label><input type="url" id="asLink" placeholder="https://" value="' + escAttr((mine && mine.link) || '') + '"></div>' +
+      (preview ? '<p class="text-muted">Submitting is disabled in preview.</p>' : '<button class="btn btn-primary" id="asSubmit">' + (mine ? 'Resubmit' : 'Submit assignment') + '</button>') + '</div>';
+    const btn = document.getElementById('asSubmit');
+    if (!btn) return;
+    btn.onclick = async () => {
+      btn.disabled = true;
+      try {
+        await apiFetch('/builder/units/' + u.module_id + '/assignment', { method: 'POST', body: JSON.stringify({ content: document.getElementById('asText').value, link: document.getElementById('asLink').value }) });
+        toast('Assignment submitted.');
+        markDoneLocal(u);
+        renderAssignment(body, u);
+      } catch (e) { toast(e.message, true); btn.disabled = false; }
+    };
+  }
+
+  // ---------------- start ----------------
+  if (me) {
+    if (preview) document.getElementById('previewBar').classList.remove('hidden');
+    const back = document.getElementById('backLink');
+    if (!isTrainee || preview) {
+      back.href = me.role === 'Admin' ? '../admin/course-builder.html?id=' + encodeURIComponent(courseId) : '../supervisor/dashboard.html';
+      back.textContent = me.role === 'Admin' ? '← Back to editor' : '← Back';
+    }
+    if (!courseId) document.getElementById('mainContent').innerHTML = '<div class="lr-card">No training selected.</div>';
+    else load();
+  }
+</script>
+</body>
+</html>
