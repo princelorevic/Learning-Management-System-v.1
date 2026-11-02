@@ -1,0 +1,54 @@
+/* ===========================================================
+   Shared styles for the course builder (admin) and the course
+   player (trainee). Uses the tokens from design-system.css.
+=========================================================== */
+
+/* ---------- unit type colours (small icon tile) ---------- */
+.ti { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; flex: none; background: var(--surface-light); }
+.ti-lesson { background: #e0f2fe; }
+.ti-web { background: #dbeafe; }
+.ti-video { background: #fce7f3; }
+.ti-audio { background: #ede9fe; }
+.ti-presentation { background: #ffedd5; }
+.ti-document { background: #fef9c3; }
+.ti-iframe { background: #e2e8f0; font-size: 11px; font-weight: 700; color: #334155; }
+.ti-quiz { background: #dcfce7; }
+.ti-survey { background: #ccfbf1; }
+.ti-assignment { background: #fee2e2; }
+.ti-ilt { background: #fae8ff; }
+
+/* ---------- rendered text (lessons, instructions) ---------- */
+.cr-text { font-size: 16px; line-height: 1.75; color: var(--text-main); overflow-wrap: anywhere; }
+.cr-text p { margin: 0 0 14px; color: inherit; }
+.cr-text h1, .cr-text h2, .cr-text h3, .cr-text h4 { margin: 24px 0 10px; line-height: 1.3; }
+.cr-text ul, .cr-text ol { margin: 0 0 14px 24px; }
+.cr-text li { margin-bottom: 4px; }
+.cr-text a { color: var(--primary); text-decoration: underline; }
+.cr-text blockquote { border-left: 4px solid var(--border-hover); padding: 4px 16px; margin: 0 0 14px; color: var(--text-muted); }
+.cr-text hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.cr-text pre, .cr-text code { background: var(--surface-light); border-radius: 4px; padding: 2px 6px; font-size: 14px; }
+
+/* ---------- big media (video, slides, documents, frames) ---------- */
+.cr-frame { position: relative; width: 100%; background: #0b1220; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-md); }
+.cr-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+.cr-frame.ratio { aspect-ratio: 16 / 9; }
+.cr-frame.tall { height: min(78vh, 900px); min-height: 460px; }
+.cr-frame.short { height: 180px; }
+.cr-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.cr-audio { background: var(--surface-light); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; }
+.cr-audio audio { width: 100%; display: block; }
+.cr-open { margin-top: 10px; font-size: 13px; color: var(--text-light); }
+.cr-open a { color: var(--primary); font-weight: 600; }
+.cr-empty { border: 2px dashed var(--border-hover); border-radius: var(--radius-md); padding: 36px 20px; text-align: center; color: var(--text-light); background: var(--surface); }
+
+/* ---------- instructor-led session card ---------- */
+.cr-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 0 0 18px; }
+.cr-fact { background: var(--surface-light); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
+.cr-fact small { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); font-weight: 600; margin-bottom: 2px; }
+.cr-fact strong { font-size: 15px; overflow-wrap: anywhere; }
+
+/* ---------- survey / assignment status chips ---------- */
+.cr-note { border-radius: var(--radius-sm); padding: 10px 14px; font-size: 14px; margin: 12px 0; }
+.cr-note-ok { background: var(--success-light); color: #047857; }
+.cr-note-warn { background: var(--warning-light); color: #b45309; }
+.cr-note-info { background: var(--primary-light); color: var(--primary-hover); }
