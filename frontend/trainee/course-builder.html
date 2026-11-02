@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course Builder — Enterprise LMS</title>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="stylesheet" href="../assets/css/course-ui.css">
+<style>
+  html, body { height: 100%; }
+  body { overflow: hidden; }
+  button { font-family: inherit; }
+
+  /* ---------- layout ---------- */
+  .b-shell { display: flex; height: 100vh; }
+  .b-side { width: 340px; flex: none; display: flex; flex-direction: column; background: var(--surface); border-right: 1px solid var(--border); position: relative; z-index: 5; }
+  .b-side-top { background: var(--sidebar-bg); color: #fff; padding: 14px 16px 16px; position: relative; }
+  .b-back { color: #93c5fd; font-size: 13px; font-weight: 600; display: inline-flex; gap: 6px; }
+  .b-back:hover { color: #fff; }
+  .b-side-title { font-size: 17px; font-weight: 700; margin: 10px 0; line-height: 1.3; overflow-wrap: anywhere; cursor: pointer; }
+  .b-side-title:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .b-side-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .b-pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.14); color: #e2e8f0; }
+  .b-pill.on { background: #065f46; color: #d1fae5; }
+  .b-pill-btn { background: none; border: 1px solid rgba(255,255,255,.35); color: #fff; font-size: 12.5px; font-weight: 600; border-radius: 999px; padding: 3px 12px; cursor: pointer; }
+  .b-pill-btn:hover { background: rgba(255,255,255,.12); }
+  .b-add-row { display: flex; gap: 8px; margin-top: 14px; }
+  .b-add-row .btn-primary { flex: 1; font-size: 15px; padding: 11px 16px; }
+  .b-units { flex: 1; overflow: auto; padding: 8px 0 24px; }
+  .b-empty { text-align: center; color: var(--text-light); padding: 40px 24px; font-size: 14px; line-height: 1.7; }
+
+  .u-item { display: flex; align-items: center; gap: 10px; padding: 9px 8px 9px 14px; cursor: pointer; border-left: 3px solid transparent; position: relative; }
+  .u-item:hover { background: var(--surface-light); }
+  .u-item.active { background: var(--primary-light); border-left-color: var(--primary); }
+  .u-item.dragging { opacity: .4; }
+  .u-item.drop-before::before, .u-item.drop-after::after { content: ""; position: absolute; left: 12px; right: 12px; height: 3px; background: var(--primary); border-radius: 3px; }
+  .u-item.drop-before::before { top: -2px; }
+  .u-item.drop-after::after { bottom: -2px; }
+  .u-title { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .u-link { font-size: 12px; }
+  .u-more { background: none; border: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 18px; color: var(--text-light); line-height: 1; }
+  .u-more:hover { background: var(--border); color: var(--text-main); }
+  .u-item.is-section { background: var(--surface-light); margin-top: 8px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .u-item.is-section .u-title { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+  .u-item.is-section.active { background: var(--primary-light); }
+
+  /* ---------- add menu ---------- */
+  .am { position: absolute; left: 12px; top: calc(100% - 6px); width: 330px; background: var(--surface); color: var(--text-main); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 48px -12px rgba(15,23,42,.35); z-index: 60; padding: 6px; }
+  .am-cat { position: relative; }
+  .am-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: none; background: none; border-radius: 10px; cursor: pointer; text-align: left; color: inherit; }
+  .am-row:hover, .am-cat.open > .am-row { background: var(--surface-light); }
+  .am-row b { display: block; font-size: 14px; }
+  .am-row small { display: block; font-size: 12px; color: var(--text-light); line-height: 1.35; }
+  .am-row .chev { margin-left: auto; color: var(--text-light); font-size: 18px; }
+  .am-row:disabled { opacity: .55; cursor: not-allowed; }
+  .am-sub { display: none; position: absolute; left: calc(100% + 8px); top: -6px; width: 310px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 48px -12px rgba(15,23,42,.35); padding: 6px; }
+  .am-cat.open > .am-sub { display: block; }
+  .am-soon { font-size: 10.5px; font-weight: 700; background: var(--warning-light); color: #b45309; border-radius: 999px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; }
+  .am-foot { border-top: 1px solid var(--border); margin: 6px 6px 2px; padding: 8px 6px 4px; font-size: 12px; color: var(--text-light); }
+
+  /* kebab menu */
+  .km { position: fixed; z-index: 70; width: 190px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 18px 36px -10px rgba(15,23,42,.3); padding: 5px; }
+  .km button { display: block; width: 100%; text-align: left; border: none; background: none; padding: 8px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; color: var(--text-main); }
+  .km button:hover:not(:disabled) { background: var(--surface-light); }
+  .km button:disabled { opacity: .4; cursor: default; }
+  .km button.danger { color: #b91c1c; }
+
+  /* ---------- main area ---------- */
+  .b-main { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; }
+  .b-scroll { flex: 1; overflow: auto; }
+  .b-foot { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 12px 28px; background: var(--surface); border-top: 1px solid var(--border); }
+  .b-foot .spacer { flex: 1; }
+  #saveHint { font-size: 13px; color: #b45309; font-weight: 600; }
+
+  .b-banner { display: flex; gap: 28px; align-items: center; justify-content: space-between; padding: 32px 36px; background: linear-gradient(120deg, #0f172a, #1e3a8a 70%, #2563eb); color: #fff; }
+  .b-banner-text { flex: 1; min-width: 0; }
+  .b-chip { display: inline-block; background: #fff; color: #0f172a; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 8px; margin-bottom: 10px; }
+  .b-title-input { width: 100%; background: transparent; border: 1px solid transparent; color: #fff; font-size: 28px; font-weight: 700; padding: 6px 10px; margin-left: -10px; border-radius: 8px; letter-spacing: -.02em; }
+  .b-title-input:hover { border-color: rgba(255,255,255,.35); }
+  .b-title-input:focus { background: rgba(255,255,255,.1); border-color: #fff; box-shadow: none; }
+  .b-banner-meta { margin-top: 8px; color: #bfdbfe; font-size: 14px; }
+  .b-cover { width: 300px; flex: none; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden; position: relative; background: #fff7ed; box-shadow: 0 16px 32px -12px rgba(0,0,0,.5); }
+  .b-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .b-cover-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--text-muted); font-weight: 600; font-size: 14px; cursor: pointer; background: linear-gradient(135deg, #dbeafe, #fef3c7); }
+  .b-cover-actions { position: absolute; inset: auto 0 0 0; display: flex; gap: 8px; justify-content: center; padding: 28px 10px 10px; background: linear-gradient(transparent, rgba(0,0,0,.6)); opacity: 0; transition: var(--transition); }
+  .b-cover:hover .b-cover-actions, .b-cover:focus-within .b-cover-actions { opacity: 1; }
+  @media (hover: none) { .b-cover-actions { opacity: 1; } }
+
+  .b-body, .b-edit { padding: 28px 36px 40px; max-width: 1040px; }
+  .b-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 26px 0 18px; }
+  .b-tab { background: none; border: none; padding: 10px 18px; font-weight: 600; font-size: 14.5px; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+  .b-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .ov-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: none; background: none; border-radius: 10px; cursor: pointer; text-align: left; color: inherit; font-size: 15px; }
+  .ov-row:hover { background: var(--surface-light); }
+  .ov-row small { margin-left: auto; color: var(--text-light); }
+  .ov-sec { margin: 18px 0 6px; padding: 6px 12px; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-light); border-bottom: 1px solid var(--border); }
+  .ov-empty { text-align: center; padding: 36px 16px; border: 2px dashed var(--border-hover); border-radius: 14px; color: var(--text-muted); }
+  .count { float: right; font-weight: 500; color: var(--text-light); font-size: 12.5px; }
+
+  /* ---------- unit editor ---------- */
+  .b-crumb a { color: var(--primary); font-weight: 600; font-size: 14px; }
+  .b-edit-head { display: flex; align-items: center; gap: 10px; margin: 14px 0 18px; }
+  .b-type { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 18px; }
+  .b-pv-label { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-light); margin: 28px 0 10px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+  /* rich text editor */
+  .rte { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); overflow: hidden; }
+  .rte:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
+  .rte-bar { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px; background: var(--surface-light); border-bottom: 1px solid var(--border); }
+  .rte-bar button { border: none; background: none; padding: 6px 11px; border-radius: 6px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--text-main); }
+  .rte-bar button:hover { background: var(--border); }
+  .rte-bar .sep { width: 1px; background: var(--border-hover); margin: 4px 6px; }
+  .rte-area { min-height: 280px; padding: 16px 18px; outline: none; }
+  .rte-area:empty::before { content: attr(data-placeholder); color: var(--text-light); }
+
+  /* question cards (tests + surveys) */
+  .qcard { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; background: var(--surface); }
+  .qcard-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .qcard-head strong { flex: 1; }
+  .mini { border: none; background: var(--surface-light); border-radius: 6px; padding: 4px 9px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+  .mini:hover:not(:disabled) { background: var(--border); }
+  .mini:disabled { opacity: .4; cursor: default; }
+  .mini.danger { color: #b91c1c; }
+  .qline { font-size: 14px; padding: 2px 0; color: var(--text-muted); }
+  .qline.ok { color: #047857; font-weight: 600; }
+  .qf-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .qf-row input[type="radio"] { width: 18px; height: 18px; flex: none; accent-color: var(--primary); }
+  .bar { height: 8px; background: var(--surface-light); border-radius: 999px; overflow: hidden; flex: 1; }
+  .bar > i { display: block; height: 100%; background: var(--primary); }
+  .res-line { display: flex; align-items: center; gap: 10px; font-size: 14px; margin: 4px 0; }
+  .res-line span:first-child { width: 38%; overflow-wrap: anywhere; }
+  .badge-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* toast */
+  #bToasts { position: fixed; right: 20px; bottom: 80px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .b-toast { padding: 11px 18px; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-md); background: #047857; max-width: 360px; }
+  .b-toast.error { background: #b91c1c; }
+
+  .modal .b-modal-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  .pick-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--border); font-size: 14.5px; cursor: pointer; }
+  .pick-row input { width: 18px; height: 18px; accent-color: var(--primary); flex: none; }
+  .pick-row.off { opacity: .45; cursor: not-allowed; }
+
+  @media (max-width: 900px) {
+    body { overflow: auto; }
+    .b-shell { flex-direction: column; height: auto; }
+    .b-side { width: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    .b-units { max-height: 40vh; }
+    .b-main { height: auto; }
+    .b-banner { flex-direction: column; align-items: stretch; padding: 22px 18px; }
+    .b-cover { width: 100%; }
+    .b-body, .b-edit { padding: 20px 18px 30px; }
+    .b-foot { position: sticky; bottom: 0; padding: 12px 18px; z-index: 4; }
+    .am { left: 0; right: 0; width: auto; }
+    .am-sub { position: static; width: auto; box-shadow: none; border: none; padding: 0 0 0 14px; }
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="b-shell">
+  <aside class="b-side">
+    <div class="b-side-top">
+      <a href="trainings.html" class="b-back">← Back to Trainings</a>
+      <div class="b-side-title" id="sideTitle" data-act="to-overview" title="Course overview">Loading…</div>
+      <div class="b-side-row">
+        <span class="b-pill" id="statusPill"></span>
+        <button class="b-pill-btn" id="publishBtn"></button>
+        <button class="b-pill-btn" id="previewBtn" title="See it the way a trainee will">👁 Preview</button>
+      </div>
+      <div class="b-add-row"><button class="btn btn-primary" id="addBtn">＋ Add</button></div>
+
+      <div class="am hidden" id="addMenu">
+        <div class="am-cat">
+          <button class="am-row" type="button"><span class="ti">📚</span><span><b>Standard Content</b><small>Add text, video, audio, presentation, etc.</small></span><span class="chev">›</span></button>
+          <div class="am-sub">
+            <button class="am-row" data-add="lesson"><span class="ti ti-lesson">📝</span><span><b>Content</b><small>Write a lesson with formatting</small></span></button>
+            <button class="am-row" data-add="web"><span class="ti ti-web">🌐</span><span><b>Web content</b><small>Show a web page</small></span></button>
+            <button class="am-row" data-add="video"><span class="ti ti-video">🎬</span><span><b>Video</b><small>YouTube, Vimeo, Loom, Drive or .mp4</small></span></button>
+            <button class="am-row" data-add="audio"><span class="ti ti-audio">🎧</span><span><b>Audio</b><small>A sound or podcast link</small></span></button>
+            <button class="am-row" data-add="presentation"><span class="ti ti-presentation">📊</span><span><b>Presentation</b><small>Google Slides, PDF or PowerPoint link</small></span></button>
+            <button class="am-row" data-add="document"><span class="ti ti-document">📄</span><span><b>Document</b><small>Google Docs, PDF or Word link</small></span></button>
+            <button class="am-row" data-add="iframe"><span class="ti ti-iframe">&lt;/&gt;</span><span><b>Frame</b><small>Paste an embed code</small></span></button>
+          </div>
+        </div>
+        <div class="am-cat">
+          <button class="am-row" type="button"><span class="ti">🧠</span><span><b>Learning Activities</b><small>Add test, survey, assignment, instructor-led, etc.</small></span><span class="chev">›</span></button>
+          <div class="am-sub">
+            <button class="am-row" data-add="quiz"><span class="ti ti-quiz">✅</span><span><b>Test</b><small>Multiple-choice questions with a passing score</small></span></button>
+            <button class="am-row" data-add="survey"><span class="ti ti-survey">📋</span><span><b>Survey</b><small>Collect feedback, no right answers</small></span></button>
+            <button class="am-row" data-add="assignment"><span class="ti ti-assignment">📥</span><span><b>Assignment</b><small>Trainees submit an answer or link</small></span></button>
+            <button class="am-row" data-add="ilt"><span class="ti ti-ilt">🧑‍🏫</span><span><b>Instructor-led training</b><small>A live session with date and place</small></span></button>
+            <button class="am-row" disabled><span class="ti">📦</span><span><b>SCORM | API | cmi5<span class="am-soon">Coming soon</span></b><small>Needs file storage, planned for a later step</small></span></button>
+          </div>
+        </div>
+        <div class="am-cat">
+          <button class="am-row" type="button"><span class="ti">⋯</span><span><b>More</b><small>Add section, clone or link units, etc.</small></span><span class="chev">›</span></button>
+          <div class="am-sub">
+            <button class="am-row" data-add="section"><span class="ti">§</span><span><b>Section</b><small>A heading that groups the units below it</small></span></button>
+            <button class="am-row" data-import="clone"><span class="ti">⧉</span><span><b>Clone from another course</b><small>Copy units. Your copy is independent</small></span></button>
+            <button class="am-row" data-import="link"><span class="ti">🔗</span><span><b>Link from another course</b><small>Reuse units. They update with the original</small></span></button>
+          </div>
+        </div>
+        <div class="am-foot">New items go right below the unit you have selected, or at the end.</div>
+      </div>
+    </div>
+    <nav class="b-units" id="unitList"></nav>
+  </aside>
+
+  <main class="b-main" id="main"><div class="b-body"><p class="text-muted">Loading…</p></div></main>
+</div>
+
+<div class="km hidden" id="kebab"></div>
+<div id="bToasts"></div>
+
+<div class="modal-backdrop hidden" id="importModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header"><h2 id="importTitle"></h2><button class="modal-close" id="importClose">&times;</button></div>
+    <p class="text-muted mb-16" id="importHelp"></p>
+    <div class="form-group"><label for="importCourse">Training</label><select id="importCourse"></select></div>
+    <div id="importUnits"></div>
+    <div class="b-modal-foot">
+      <button class="btn btn-secondary" id="importCancel">Cancel</button>
+      <button class="btn btn-primary" id="importGo" disabled>Add</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/course-render.js"></script>
+<script>
+  requireAuth(['Admin']);
+
+  const CR = CourseRender;
+  const esc = CR.esc, escAttr = CR.escAttr;
+  const $ = (id) => document.getElementById(id);
+  const main = $('main');
+  const params = new URLSearchParams(location.search);
+  const courseId = Number(params.get('id'));
+  if (!courseId) location.href = 'trainings.html';
+
+  const B = (path, method, body) => apiFetch('/builder' + path, { method: method || 'GET', body: body === undefined ? undefined : JSON.stringify(body) });
+
+  let course = null, units = [], selectedId = null, dirty = false, saving = false;
+  let overviewTab = 'content';
+  let surveyDraft = [];      // survey questions being edited
+  let quizQs = [], qForm = null;
+
+  function notify(message, type) {
+    const el = document.createElement('div');
+    el.className = 'b-toast' + (type === 'error' ? ' error' : '');
+    el.textContent = message;
+    $('bToasts').appendChild(el);
+    setTimeout(() => el.remove(), type === 'error' ? 5000 : 2800);
+  }
+
+  const cur = () => units.find((u) => u.module_id === selectedId) || null;
+  const rnd = () => Math.random().toString(36).slice(2, 10);
+
+  // ============================================================
+  // Loading
+  // ============================================================
+  async function load() {
+    const d = await B(`/courses/${courseId}/outline`);
+    course = d.course;
+    units = d.units;
+    if (selectedId && !units.some((u) => u.module_id === selectedId)) selectedId = null;
+  }
+
+  function setDirty(v) {
+    dirty = v;
+    const b = $('saveBtn');
+    if (b) { b.disabled = !v; b.textContent = v ? 'Save changes' : 'Saved ✓'; }
+    const h = $('saveHint');
+    if (h) h.textContent = v ? 'You have unsaved changes' : '';
+  }
+  function confirmLeave() {
+    if (!dirty) return true;
+    if (confirm('You have unsaved changes. Leave without saving?')) { dirty = false; return true; }
+    return false;
+  }
+  window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  // ============================================================
+  // Sidebar
+  // ============================================================
+  function renderSide() {
+    $('sideTitle').textContent = course.title;
+    const pub = course.status === 'Published';
+    $('statusPill').textContent = course.status;
+    $('statusPill').classList.toggle('on', pub);
+    $('publishBtn').textContent = pub ? 'Unpublish' : 'Publish';
+    document.title = `${course.title} — Course Builder`;
+
+    $('unitList').innerHTML = units.length ? units.map((u) => {
+      const info = CR.typeInfo(u.module_type);
+      const active = u.module_id === selectedId ? ' active' : '';
+      if (u.module_type === 'section') {
+        return `<div class="u-item is-section${active}" draggable="true" data-id="${u.module_id}">
+          <span class="u-title">${esc(u.title)}</span>
+          <button class="u-more" data-more="${u.module_id}" title="More">⋮</button></div>`;
+      }
+      return `<div class="u-item${active}" draggable="true" data-id="${u.module_id}">
+        <span class="ti ti-${u.module_type}">${info.icon}</span>
+        <span class="u-title" title="${escAttr(u.title)}">${esc(u.title)}</span>
+        ${u.is_linked ? '<span class="u-link" title="Linked from another training">🔗</span>' : ''}
+        <button class="u-more" data-more="${u.module_id}" title="More">⋮</button></div>`;
+    }).join('') : '<div class="b-empty">No content yet.<br>Click <b>＋ Add</b> to create your first unit.</div>';
+  }
+
+  // click / select
+  $('unitList').addEventListener('click', (e) => {
+    const more = e.target.closest('[data-more]');
+    if (more) { e.stopPropagation(); openKebab(Number(more.dataset.more), more); return; }
+    const row = e.target.closest('[data-id]');
+    if (row) selectUnit(Number(row.dataset.id));
+  });
+
+  function selectUnit(id) {
+    if (id === selectedId) return;
+    if (!confirmLeave()) return;
+    selectedId = id;
+    renderSide();
+    renderMain();
+  }
+  function goOverview() {
+    if (!confirmLeave()) return;
+    selectedId = null;
+    renderSide();
+    renderMain();
+  }
+  document.querySelector('.b-side-title').addEventListener('click', goOverview);
+
+  // drag and drop reordering
+  (function () {
+    const list = $('unitList');
+    let dragId = null;
+    const clearMarks = () => list.querySelectorAll('.drop-before,.drop-after').forEach((n) => n.classList.remove('drop-before', 'drop-after'));
+    list.addEventListener('dragstart', (e) => {
+      const row = e.target.closest('[data-id]');
+      if (!row) return;
+      dragId = Number(row.dataset.id);
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(dragId));
+    });
+    list.addEventListener('dragover', (e) => {
+      if (dragId === null) return;
+      e.preventDefault();
+      clearMarks();
+      const row = e.target.closest('[data-id]');
+      if (row && Number(row.dataset.id) !== dragId) {
+        const r = row.getBoundingClientRect();
+        row.classList.add(e.clientY > r.top + r.height / 2 ? 'drop-after' : 'drop-before');
+      }
+    });
+    list.addEventListener('drop', (e) => {
+      if (dragId === null) return;
+      e.preventDefault();
+      const row = e.target.closest('[data-id]');
+      const targetId = row ? Number(row.dataset.id) : null;
+      let after = false;
+      if (row) { const r = row.getBoundingClientRect(); after = e.clientY > r.top + r.height / 2; }
+      const moving = dragId;
+      dragId = null;
+      clearMarks();
+      if (targetId === null || targetId === moving) { renderSide(); return; }
+      const order = units.map((u) => u.module_id).filter((id) => id !== moving);
+      const at = order.indexOf(targetId) + (after ? 1 : 0);
+      order.splice(at, 0, moving);
+      saveOrder(order);
+    });
+    list.addEventListener('dragend', () => { dragId = null; clearMarks(); list.querySelectorAll('.dragging').forEach((n) => n.classList.remove('dragging')); });
+  })();
+
+  async function saveOrder(order) {
+    const byId = new Map(units.map((u) => [u.module_id, u]));
+    const previous = units;
+    units = order.map((id) => byId.get(id));
+    renderSide();
+    try {
+      await B(`/courses/${courseId}/order`, 'PUT', { order });
+      notify('Order saved');
+    } catch (err) {
+      units = previous;
+      renderSide();
+      notify(err.message, 'error');
+    }
+  }
+
+  // ---------------- kebab (⋮) menu ----------------
+  function openKebab(id, btn) {
+    closeMenus();
+    const i = units.findIndex((u) => u.module_id === id);
+    const km = $('kebab');
+    km.dataset.id = id;
+    km.innerHTML = `
+      <button data-k="edit">✏️ Edit</button>
+      <button data-k="dup">⧉ Duplicate</button>
+      <button data-k="up" ${i === 0 ? 'disabled' : ''}>↑ Move up</button>
+      <button data-k="down" ${i === units.length - 1 ? 'disabled' : ''}>↓ Move down</button>
+      <button data-k="del" class="danger">🗑 Remove</button>`;
+    const r = btn.getBoundingClientRect();
+    km.style.top = Math.min(r.bottom + 4, window.innerHeight - 220) + 'px';
+    km.style.left = Math.max(8, Math.min(r.left - 120, window.innerWidth - 200)) + 'px';
+    km.classList.remove('hidden');
+  }
+  $('kebab').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-k]');
+    if (!b || b.disabled) return;
+    const id = Number($('kebab').dataset.id);
+    closeMenus();
+    const i = units.findIndex((u) => u.module_id === id);
+    if (b.dataset.k === 'edit') selectUnit(id);
+    if (b.dataset.k === 'dup') duplicateUnit(id);
+    if (b.dataset.k === 'del') deleteUnit(id);
+    if (b.dataset.k === 'up' || b.dataset.k === 'down') {
+      const order = units.map((u) => u.module_id);
+      const j = b.dataset.k === 'up' ? i - 1 : i + 1;
+      [order[i], order[j]] = [order[j], order[i]];
+      saveOrder(order);
+    }
+  });
+
+  async function duplicateUnit(id) {
+    try {
+      await B(`/units/${id}/duplicate`, 'POST');
+      await load(); renderSide();
+      notify('Duplicated');
+    } catch (err) { notify(err.message, 'error'); }
+  }
+  async function deleteUnit(id) {
+    const u = units.find((x) => x.module_id === id);
+    if (!u) return;
+    if (!confirm(`Remove "${u.title}"?${u.module_type === 'quiz' ? ' Its questions will be removed too.' : ''}`)) return;
+    try {
+      await B(`/units/${id}`, 'DELETE');
+      if (selectedId === id) { selectedId = null; dirty = false; }
+      await load(); renderSide(); renderMain();
+      notify('Removed');
+    } catch (err) { notify(err.message, 'error'); }
+  }
+
+  // ---------------- add menu ----------------
+  function closeMenus() {
+    $('addMenu').classList.add('hidden');
+    $('kebab').classList.add('hidden');
+    document.querySelectorAll('.am-cat.open').forEach((c) => c.classList.remove('open'));
+  }
+  function toggleAddMenu() {
+    const hidden = $('addMenu').classList.contains('hidden');
+    closeMenus();
+    if (hidden) $('addMenu').classList.remove('hidden');
+  }
+  $('addBtn').addEventListener('click', (e) => { e.stopPropagation(); toggleAddMenu(); });
+  document.querySelectorAll('.am-cat').forEach((cat) => {
+    cat.querySelector(':scope > .am-row').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = cat.classList.contains('open');
+      document.querySelectorAll('.am-cat.open').forEach((c) => c.classList.remove('open'));
+      if (!open) cat.classList.add('open');
+    });
+    cat.addEventListener('mouseenter', () => {
+      if (!window.matchMedia('(hover: hover) and (min-width: 901px)').matches) return;
+      document.querySelectorAll('.am-cat.open').forEach((c) => c.classList.remove('open'));
+      cat.classList.add('open');
+    });
+  });
+  $('addMenu').addEventListener('click', (e) => {
+    const add = e.target.closest('[data-add]');
+    const imp = e.target.closest('[data-import]');
+    if (add) addUnit(add.dataset.add);
+    if (imp) openImport(imp.dataset.import);
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#addMenu') && !e.target.closest('#kebab')) closeMenus();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closeMenus(); $('importModal').classList.add('hidden'); }
+  });
+
+  async function addUnit(type) {
+    closeMenus();
+    if (!confirmLeave()) return;
+    try {
+      const r = await B(`/courses/${courseId}/units`, 'POST', { module_type: type, after_module_id: selectedId || undefined });
+      await load();
+      selectedId = r.moduleId;
+      renderSide();
+      renderMain();
+      const active = document.querySelector('.u-item.active');
+      if (active) active.scrollIntoView({ block: 'nearest' });
+      const t = $('u_title');
+      if (t) { t.focus(); t.select(); }
+      notify('Added. Give it a name, fill it in, then click Save.');
+    } catch (err) { notify(err.message, 'error'); }
+  }
+
+  // ---------------- publish / preview ----------------
+  $('publishBtn').addEventListener('click', async () => {
+    const to = course.status === 'Published' ? 'Draft' : 'Published';
+    if (to === 'Published' && !units.some((u) => u.module_type !== 'section') && !confirm('This training has no content yet. Publish anyway?')) return;
+    try {
+      await B(`/courses/${courseId}/meta`, 'PUT', { status: to });
+      course.status = to;
+      renderSide();
+      const s = $('ov_status'); if (s) s.value = to;
+      notify(to === 'Published' ? 'Published. Trainees can now see this training.' : 'Moved back to Draft.');
+    } catch (err) { notify(err.message, 'error'); }
+  });
+  $('previewBtn').addEventListener('click', () => window.open(`../trainee/learn.html?id=${courseId}&preview=1`, '_blank'));
+
+  // ============================================================
+  // Main area
+  // ============================================================
+  function renderMain() {
+    const u = cur();
+    if (u) renderEditor(u); else renderOverview();
+    main.scrollTop = 0;
+  }
+
+  // ---------------- overview (banner, description, content list, settings) ----------------
+  function coverHtml() {
+    if (course.image_url) {
+      return `<img src="${escAttr(course.image_url)}" alt="Training cover image">
+        <div class="b-cover-actions">
+          <label class="btn btn-secondary btn-sm" for="coverFile" style="cursor:pointer;">Change image</label>
+          <button class="btn btn-secondary btn-sm" data-act="cover-remove">Remove</button>
+        </div>`;
+    }
+    return `<label class="b-cover-empty" for="coverFile"><div style="font-size:34px">🖼️</div><div>Add a cover image</div></label>`;
+  }
+
+  function renderOverview() {
+    const count = units.filter((u) => u.module_type !== 'section').length;
+    const list = units.length ? (() => {
+      let n = 0;
+      return units.map((u) => {
+        if (u.module_type === 'section') return `<div class="ov-sec">${esc(u.title)}</div>`;
+        n++;
+        const info = CR.typeInfo(u.module_type);
+        return `<button class="ov-row" data-act="open-unit" data-id="${u.module_id}">
+          <span class="ti ti-${u.module_type}">${info.icon}</span><span>${n}. ${esc(u.title)}</span>
+          <small>${info.label}${u.is_linked ? ' · linked' : ''}</small></button>`;
+      }).join('');
+    })() : `<div class="ov-empty"><div style="font-size:34px">📚</div>
+        <p style="margin:6px 0 14px;">This training has no content yet.</p>
+        <button class="btn btn-primary" data-act="open-add">＋ Add content</button></div>`;
+
+    main.innerHTML = `
+      <div class="b-scroll" id="scrollArea">
+        <div class="b-banner">
+          <div class="b-banner-text">
+            <span class="b-chip">Course</span>
+            <input class="b-title-input" id="ov_title" type="text" maxlength="200" value="${escAttr(course.title)}" aria-label="Training title">
+            <div class="b-banner-meta">${count} unit${count === 1 ? '' : 's'} · click the title to rename it</div>
+          </div>
+          <div class="b-cover" id="cover">${coverHtml()}</div>
+          <input type="file" id="coverFile" accept="image/*" hidden>
+        </div>
+        <div class="b-body">
+          <div class="form-group">
+            <label for="ov_desc">Description <span class="count" id="descCount"></span></label>
+            <textarea id="ov_desc" rows="4" maxlength="5000" placeholder="Add a course description up to 5000 characters">${esc(course.description || '')}</textarea>
+          </div>
+          <div class="b-tabs">
+            <button class="b-tab ${overviewTab === 'content' ? 'active' : ''}" data-act="tab" data-tab="content">Content</button>
+            <button class="b-tab ${overviewTab === 'settings' ? 'active' : ''}" data-act="tab" data-tab="settings">Settings</button>
+          </div>
+          <div id="tab-content" class="${overviewTab === 'content' ? '' : 'hidden'}">${list}</div>
+          <div id="tab-settings" class="${overviewTab === 'settings' ? '' : 'hidden'}">
+            <div class="grid2">
+              <div class="form-group"><label for="ov_dept">Department (or "ALL")</label><input type="text" id="ov_dept" maxlength="100" value="${escAttr(course.department_target || 'ALL')}"></div>
+              <div class="form-group"><label for="ov_hours">Duration (hours)</label><input type="number" id="ov_hours" min="0" step="0.5" value="${escAttr(course.duration_hours)}"></div>
+            </div>
+            <div class="form-group" style="max-width:320px;"><label for="ov_status">Status</label>
+              <select id="ov_status">${['Draft', 'Published', 'Archived'].map((s) => `<option ${s === course.status ? 'selected' : ''}>${s}</option>`).join('')}</select>
+              <p class="text-muted mt-8" style="font-size:12px;">Only Published trainings are visible to trainees.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="b-foot">
+        <span id="saveHint"></span><span class="spacer"></span>
+        <button class="btn btn-primary" id="saveBtn" data-act="save-overview" disabled>Saved ✓</button>
+      </div>`;
+    updateDescCount();
+    dirty = false;
+  }
+  function updateDescCount() {
+    const d = $('ov_desc'), c = $('descCount');
+    if (d && c) c.textContent = `${d.value.length} / 5000`;
+  }
+  function showTab(tab) {
+    overviewTab = tab;
+    document.querySelectorAll('.b-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
+    $('tab-content').classList.toggle('hidden', tab !== 'content');
+    $('tab-settings').classList.toggle('hidden', tab !== 'settings');
+  }
+
+  async function saveOverview() {
+    if (saving) return;
+    const title = $('ov_title').value.trim();
+    if (!title) { notify('The training needs a title.', 'error'); $('ov_title').focus(); return; }
+    const body = {
+      title,
+      description: $('ov_desc').value.trim(),
+      department_target: $('ov_dept').value.trim() || 'ALL',
+      duration_hours: parseFloat($('ov_hours').value) || 0,
+      status: $('ov_status').value
+    };
+    saving = true; $('saveBtn').disabled = true; $('saveBtn').textContent = 'Saving…';
+    try {
+      await B(`/courses/${courseId}/meta`, 'PUT', body);
+      Object.assign(course, body);
+      renderSide();
+      setDirty(false);
+      notify('Saved');
+    } catch (err) {
+      notify(err.message, 'error');
+      setDirty(true);
+    } finally { saving = false; }
+  }
+
+  // cover image: resized in the browser so it stays small
+  function fileToCover(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const W = 800, H = 500;
+        const c = document.createElement('canvas');
+        c.width = W; c.height = H;
+        const ctx = c.getContext('2d');
+        const s = Math.max(W / img.width, H / img.height);
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+        ctx.drawImage(img, (W - img.width * s) / 2, (H - img.height * s) / 2, img.width * s, img.height * s);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file is not a picture we can read.')); };
+      img.src = url;
+    });
+  }
+  main.addEventListener('change', async (e) => {
+    if (e.target.id !== 'coverFile') return;
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 12 * 1024 * 1024) { notify('That picture is too big (max 12 MB).', 'error'); return; }
+    try {
+      const dataUrl = await fileToCover(file);
+      await B(`/courses/${courseId}/meta`, 'PUT', { image_url: dataUrl });
+      course.image_url = dataUrl;
+      $('cover').innerHTML = coverHtml();
+      notify('Cover image updated');
+    } catch (err) { notify(err.message, 'error'); }
+  });
+  async function removeCover() {
+    try {
+      await B(`/courses/${courseId}/meta`, 'PUT', { image_url: '' });
+      course.image_url = null;
+      $('cover').innerHTML = coverHtml();
+      notify('Cover image removed');
+    } catch (err) { notify(err.message, 'error'); }
+  }
+
+  // ---------------- unit editor ----------------
+  function urlField(label, value, hint, area) {
+    return `<div class="form-group"><label for="u_url">${label}</label>
+      ${area
+        ? `<textarea id="u_url" rows="3" placeholder='<iframe src="https://..."></iframe>  or  https://...'>${esc(value || '')}</textarea>`
+        : `<input type="text" id="u_url" value="${escAttr(value || '')}" placeholder="https://...">`}
+      <p class="text-muted mt-8" style="font-size:12px;">${hint}</p></div>`;
+  }
+  function rte(id, html) {
+    return `<div class="rte">
+      <div class="rte-bar">
+        <button type="button" data-act="rte" data-cmd="bold" title="Bold"><b>B</b></button>
+        <button type="button" data-act="rte" data-cmd="italic" title="Italic"><i>I</i></button>
+        <button type="button" data-act="rte" data-cmd="underline" title="Underline"><u>U</u></button>
+        <span class="sep"></span>
+        <button type="button" data-act="rte" data-cmd="formatBlock" data-val="<h2>" title="Heading">Heading</button>
+        <button type="button" data-act="rte" data-cmd="formatBlock" data-val="<p>" title="Normal text">Normal</button>
+        <span class="sep"></span>
+        <button type="button" data-act="rte" data-cmd="insertUnorderedList" title="Bullet list">• List</button>
+        <button type="button" data-act="rte" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+        <span class="sep"></span>
+        <button type="button" data-act="rte" data-cmd="createLink" title="Add a link">🔗 Link</button>
+        <button type="button" data-act="rte" data-cmd="removeFormat" title="Clear formatting">Clear</button>
+      </div>
+      <div class="rte-area cr-text" id="${id}" contenteditable="true" data-placeholder="Start writing here…">${CR.textHtml(html)}</div></div>`;
+  }
+  function rteValue(id) {
+    const el = $(id);
+    if (!el || !el.textContent.trim()) return '';
+    return CR.sanitizeHtml(el.innerHTML);
+  }
+  function rteCommand(btn) {
+    const cmd = btn.dataset.cmd;
+    $('u_content').focus();
+    if (cmd === 'createLink') {
+      const url = prompt('Link address (must start with https://)');
+      if (!url) return;
+      if (!/^https?:\/\//i.test(url.trim())) { notify('The link must start with http:// or https://', 'error'); return; }
+      document.execCommand('createLink', false, url.trim());
+    } else {
+      document.execCommand(cmd, false, btn.dataset.val || null);
+    }
+    setDirty(true);
+  }
+  main.addEventListener('mousedown', (e) => { if (e.target.closest('.rte-bar button')) e.preventDefault(); });
+  main.addEventListener('paste', (e) => {
+    if (!e.target.closest || !e.target.closest('.rte-area')) return;
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+  });
+
+  function typeFields(u) {
+    const s = u.settings || {};
+    switch (u.module_type) {
+      case 'lesson':
+        return `<div class="form-group"><label>Content</label>${rte('u_content', u.content)}</div>`;
+      case 'video':
+        return urlField('Video link', u.video_url, 'Paste a YouTube, Vimeo, Loom or Google Drive link, or a direct .mp4 link. It will show large for trainees.') + previewBox();
+      case 'audio':
+        return urlField('Audio link', u.resource_url, 'A direct .mp3 / .wav link, or a Google Drive link.') + previewBox();
+      case 'presentation':
+        return urlField('Presentation link', u.resource_url, 'A Google Slides link (shared as "Anyone with the link"), or a PDF / PowerPoint link. Tip: upload the file to Google Drive or OneDrive and paste its share link.') + previewBox();
+      case 'document':
+        return urlField('Document link', u.resource_url, 'A Google Docs / Drive link, or a PDF / Word link. Tip: upload the file to Google Drive or OneDrive and paste its share link.') + previewBox();
+      case 'web':
+        return urlField('Web address', u.resource_url, 'Some websites refuse to be shown inside another page. Trainees always get an "Open in a new tab" link as a backup.') + previewBox();
+      case 'iframe':
+        return urlField('Embed code or address', u.resource_url, 'Paste the whole &lt;iframe&gt; code or just its address. We will use the address.', true) + previewBox();
+      case 'quiz':
+        return `<div class="grid2">
+            <div class="form-group"><label for="u_pass">Passing score (%)</label><input type="number" id="u_pass" min="0" max="100" value="${u.pass_percent || 70}"></div>
+          </div>
+          <div class="form-group"><label for="u_content">Instructions (optional)</label><textarea id="u_content" rows="3" placeholder="Shown to the trainee before the test.">${esc(u.content || '')}</textarea></div>
+          <div class="b-pv-label" style="margin-top:8px;">Questions</div>
+          <div id="quizBox" data-nodirty></div>`;
+      case 'survey':
+        return `<div class="form-group"><label for="u_content">Introduction (optional)</label><textarea id="u_content" rows="3" placeholder="Tell trainees why you are asking.">${esc(u.content || '')}</textarea></div>
+          <div class="b-pv-label" style="margin-top:8px;">Questions</div>
+          <div id="surveyBox"></div>
+          <button type="button" class="btn btn-secondary btn-sm" data-act="s-add">＋ Add question</button>
+          <div class="b-pv-label">Responses</div>
+          <div id="resultsBox" data-nodirty></div>`;
+      case 'assignment':
+        return `<div class="form-group"><label>Instructions</label>${rte('u_content', u.content)}</div>
+          <div class="form-group" style="max-width:260px;"><label for="u_due">Due date (optional)</label><input type="date" id="u_due" value="${escAttr(s.due_date || '')}"></div>
+          <div class="b-pv-label">Submissions</div>
+          <div id="resultsBox" data-nodirty></div>`;
+      case 'ilt':
+        return `<div class="grid3">
+            <div class="form-group"><label for="u_date">Date</label><input type="date" id="u_date" value="${escAttr(s.date || '')}"></div>
+            <div class="form-group"><label for="u_start">Start time</label><input type="time" id="u_start" value="${escAttr(s.start_time || '')}"></div>
+            <div class="form-group"><label for="u_end">End time</label><input type="time" id="u_end" value="${escAttr(s.end_time || '')}"></div>
+          </div>
+          <div class="grid2">
+            <div class="form-group"><label for="u_loc">Location</label><input type="text" id="u_loc" maxlength="200" value="${escAttr(s.location || '')}" placeholder="Training room, branch, address..."></div>
+            <div class="form-group"><label for="u_inst">Instructor</label><input type="text" id="u_inst" maxlength="150" value="${escAttr(s.instructor || '')}"></div>
+          </div>
+          <div class="form-group"><label for="u_meet">Online meeting link (optional)</label><input type="text" id="u_meet" value="${escAttr(s.meeting_link || '')}" placeholder="https://meet.google.com/..."></div>
+          <div class="form-group"><label for="u_content">Details (optional)</label><textarea id="u_content" rows="4" placeholder="What to bring, agenda, notes...">${esc(u.content || '')}</textarea></div>`;
+      case 'section':
+        return `<div class="form-group"><label for="u_content">Description (optional)</label><textarea id="u_content" rows="3" placeholder="A short note shown under the section name.">${esc(u.content || '')}</textarea>
+          <p class="text-muted mt-8" style="font-size:12px;">A section is a heading. Every unit below it (until the next section) belongs to it.</p></div>`;
+      default: return '';
+    }
+  }
+  const previewBox = () => '<div class="b-pv-label">Preview</div><div id="pv"></div>';
+
+  function renderEditor(u) {
+    const info = CR.typeInfo(u.module_type);
+    const crumb = `<div class="b-crumb"><a href="#" data-act="to-overview">← ${esc(course.title)}</a></div>
+      <div class="b-edit-head"><span class="b-type"><span class="ti ti-${u.module_type}">${info.icon}</span> ${info.label}</span>
+      ${u.is_linked ? '<span class="badge badge-warning">🔗 Linked</span>' : ''}</div>`;
+
+    if (u.is_linked) {
+      main.innerHTML = `<div class="b-scroll"><div class="b-edit">${crumb}
+        <div class="cr-note cr-note-warn">🔗 <b>${esc(u.title)}</b> is linked from <b>${esc(u.source_course_title || 'another training')}</b>.
+          It updates automatically when the original changes, so it can only be edited there.
+          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+            <a class="btn btn-secondary btn-sm" href="course-builder.html?id=${u.source_course_id}&unit=${u.content_id}">Open the original ↗</a>
+            <button class="btn btn-primary btn-sm" data-act="unlink">Make my own copy</button>
+          </div></div>
+        <div class="b-pv-label">What trainees see</div>
+        ${u.module_type === 'quiz' ? `<p class="text-muted">A test with ${u.question_count} question(s), passing score ${u.pass_percent}%.</p>`
+          : (['survey', 'assignment'].includes(u.module_type) ? '<p class="text-muted">An interactive activity, shown the same as in the original.</p>' : CR.bodyHtml(u))}
+      </div></div>
+      <div class="b-foot"><span class="spacer"></span><button class="btn btn-danger btn-sm" data-act="del-unit">Remove from this training</button></div>`;
+      dirty = false;
+      return;
+    }
+
+    main.innerHTML = `<div class="b-scroll"><div class="b-edit">${crumb}
+        <div class="form-group"><label for="u_title">Title</label><input type="text" id="u_title" maxlength="200" value="${escAttr(u.title)}"></div>
+        ${typeFields(u)}
+      </div></div>
+      <div class="b-foot">
+        <button class="btn btn-danger btn-sm" data-act="del-unit">Remove</button>
+        <span class="spacer"></span><span id="saveHint"></span>
+        <button class="btn btn-primary" id="saveBtn" data-act="save-unit" disabled>Saved ✓</button>
+      </div>`;
+    dirty = false;
+
+    if ($('pv')) {
+      updatePreview(u);
+      let t;
+      $('u_url').addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => updatePreview(cur()), 500); });
+    }
+    if (u.module_type === 'quiz') loadQuiz(u);
+    if (u.module_type === 'survey') { surveyDraft = JSON.parse(JSON.stringify((u.settings && u.settings.questions) || [])); renderSurveyBuilder(); loadResults(u); }
+    if (u.module_type === 'assignment') loadResults(u);
+  }
+
+  // live preview for link-based units
+  function currentUrl(u) {
+    let v = $('u_url').value.trim();
+    if (u.module_type === 'iframe') {
+      const m = v.match(/<iframe[^>]*\ssrc\s*=\s*["']([^"']+)["']/i);
+      if (m) v = m[1];
+      if (v.startsWith('//')) v = 'https:' + v;
+    }
+    return v;
+  }
+  function updatePreview(u) {
+    const url = currentUrl(u);
+    if (url && !CR.isHttp(url)) {
+      $('pv').innerHTML = '<div class="cr-note cr-note-warn">The link must start with http:// or https://</div>';
+      return;
+    }
+    const key = u.module_type === 'video' ? 'video_url' : 'resource_url';
+    $('pv').innerHTML = CR.bodyHtml({ module_type: u.module_type, [key]: url });
+  }
+
+  function collectUnit(u) {
+    const body = { title: $('u_title').value.trim() };
+    const val = (id) => ($(id) ? $(id).value.trim() : '');
+    switch (u.module_type) {
+      case 'lesson': body.content = rteValue('u_content'); break;
+      case 'video': body.video_url = val('u_url'); break;
+      case 'audio': case 'presentation': case 'document': case 'web': case 'iframe': body.resource_url = val('u_url'); break;
+      case 'quiz': body.pass_percent = parseInt(val('u_pass'), 10); body.content = $('u_content').value; break;
+      case 'survey': body.content = $('u_content').value; body.settings = { questions: surveyDraft }; break;
+      case 'assignment': body.content = rteValue('u_content'); body.settings = { due_date: val('u_due') }; break;
+      case 'ilt':
+        body.content = $('u_content').value;
+        body.settings = { date: val('u_date'), start_time: val('u_start'), end_time: val('u_end'), location: val('u_loc'), instructor: val('u_inst'), meeting_link: val('u_meet') };
+        break;
+      case 'section': body.content = $('u_content').value; break;
+    }
+    return body;
+  }
+
+  async function saveUnit() {
+    const u = cur();
+    if (!u || saving) return;
+    const body = collectUnit(u);
+    if (!body.title) { notify('Please give this unit a title.', 'error'); $('u_title').focus(); return; }
+    if (u.module_type === 'survey') {
+      const bad = surveyDraft.findIndex((q) => !q.text.trim() || (q.type === 'choice' && q.options.filter((o) => o.trim()).length < 2));
+      if (bad !== -1) { notify(`Survey question ${bad + 1} needs a question and at least 2 choices.`, 'error'); return; }
+    }
+    saving = true; $('saveBtn').disabled = true; $('saveBtn').textContent = 'Saving…';
+    try {
+      await B(`/units/${u.module_id}`, 'PUT', body);
+      await load();
+      renderSide();
+      const nu = cur();
+      if (nu && $('u_url')) { $('u_url').value = nu.video_url || nu.resource_url || ''; updatePreview(nu); }
+      setDirty(false);
+      notify('Saved');
+    } catch (err) {
+      notify(err.message, 'error');
+      setDirty(true);
+    } finally { saving = false; }
+  }
+
+  async function unlinkToCopy() {
+    const u = cur();
+    if (!u || !confirm('Make your own copy of this unit? The link will be replaced by an independent copy you can edit.')) return;
+    try {
+      const idx = units.findIndex((x) => x.module_id === u.module_id);
+      await B(`/courses/${courseId}/import`, 'POST', { source_course_id: u.source_course_id, module_ids: [u.content_id], mode: 'clone' });
+      await B(`/units/${u.module_id}`, 'DELETE');
+      await load();
+      const newest = units[units.length - 1];
+      const order = units.map((x) => x.module_id).filter((id) => id !== newest.module_id);
+      order.splice(idx, 0, newest.module_id);
+      await B(`/courses/${courseId}/order`, 'PUT', { order });
+      selectedId = newest.module_id;
+      await load(); renderSide(); renderMain();
+      notify('You now have your own copy');
+    } catch (err) { notify(err.message, 'error'); }
+  }
+
+  // ---------------- test (quiz) questions ----------------
+  async function loadQuiz(u) {
+    const box = $('quizBox');
+    box.innerHTML = '<p class="text-muted">Loading questions…</p>';
+    try {
+      const q = await apiFetch(`/quiz/${u.content_id}`);
+      quizQs = q.questions || [];
+      renderQuiz();
+    } catch (err) { box.innerHTML = `<div class="cr-note cr-note-warn">Could not load the questions: ${esc(err.message)}</div>`; }
+  }
+  function renderQuiz() {
+    const box = $('quizBox');
+    if (!box) return;
+    const list = quizQs.map((q, i) => qForm && qForm.id === q.question_id ? qFormHtml() : `
+      <div class="qcard">
+        <div class="qcard-head"><strong>${i + 1}. ${esc(q.question_text)}</strong>
+          <button class="mini" data-act="q-edit" data-id="${q.question_id}">Edit</button>
+          <button class="mini danger" data-act="q-del" data-id="${q.question_id}">Delete</button></div>
+        ${q.choices.map((c) => `<div class="qline ${c.is_correct ? 'ok' : ''}">${c.is_correct ? '✓' : '○'} ${esc(c.choice_text)}</div>`).join('')}
+      </div>`).join('');
+    const adding = qForm && qForm.id === null ? qFormHtml() : '';
+    box.innerHTML = (list || (adding ? '' : '<p class="text-muted" style="margin-bottom:12px;">No questions yet. Add the first one.</p>')) + adding +
+      (qForm ? '' : '<button class="btn btn-secondary btn-sm" data-act="q-new">＋ Add question</button>');
+  }
+  function qFormHtml() {
+    const f = qForm;
+    return `<div class="qcard" data-nodirty>
+      <div class="form-group"><label>Question</label><input type="text" id="qf_text" value="${escAttr(f.text)}" maxlength="500" placeholder="Type the question"></div>
+      <label>Answers <span class="text-muted">(select the circle beside the correct one)</span></label>
+      <div style="margin-top:8px;">${f.choices.map((c, i) => `
+        <div class="qf-row">
+          <input type="radio" name="qf_correct" value="${i}" ${c.is_correct ? 'checked' : ''} title="Correct answer">
+          <input type="text" class="qf-choice" value="${escAttr(c.text)}" maxlength="500" placeholder="Choice ${i + 1}">
+          <button type="button" class="mini danger" data-act="qf-del" data-i="${i}" ${f.choices.length <= 2 ? 'disabled' : ''}>✕</button>
+        </div>`).join('')}</div>
+      <button type="button" class="mini" data-act="qf-add" ${f.choices.length >= 6 ? 'disabled' : ''}>＋ Add choice</button>
+      <div style="margin-top:14px; display:flex; gap:8px;">
+        <button class="btn btn-primary btn-sm" data-act="qf-save">Save question</button>
+        <button class="btn btn-secondary btn-sm" data-act="qf-cancel">Cancel</button></div>
+    </div>`;
+  }
+  function syncQForm() {
+    if (!qForm || !$('qf_text')) return;
+    qForm.text = $('qf_text').value;
+    const texts = Array.from(document.querySelectorAll('.qf-choice')).map((i) => i.value);
+    const checked = document.querySelector('input[name="qf_correct"]:checked');
+    const ci = checked ? Number(checked.value) : 0;
+    qForm.choices = texts.map((t, i) => ({ text: t, is_correct: i === ci }));
+  }
+  async function saveQuestion() {
+    syncQForm();
+    const u = cur();
+    const text = qForm.text.trim();
+    const choices = qForm.choices.filter((c) => c.text.trim()).map((c) => ({ text: c.text.trim(), is_correct: c.is_correct }));
+    if (!text) { notify('Type the question first.', 'error'); return; }
+    if (choices.length < 2) { notify('Give at least 2 answers.', 'error'); return; }
+    if (!choices.some((c) => c.is_correct)) { notify('The circle you selected is for an empty answer. Fill it in or pick another.', 'error'); return; }
+    try {
+      if (qForm.id) await apiFetch(`/quiz/questions/${qForm.id}`, { method: 'PUT', body: JSON.stringify({ question_text: text, choices }) });
+      else await apiFetch('/quiz/questions', { method: 'POST', body: JSON.stringify({ module_id: u.content_id, question_text: text, choices }) });
+      qForm = null;
+      await loadQuiz(u);
+      notify('Question saved');
+    } catch (err) { notify(err.message, 'error'); }
+  }
+  async function deleteQuestion(id) {
+    if (!confirm('Delete this question?')) return;
+    try {
+      await apiFetch(`/quiz/questions/${id}`, { method: 'DELETE' });
+      await loadQuiz(cur());
+      notify('Question deleted');
+    } catch (err) { notify(err.message, 'error'); }
+  }
+
+  // ---------------- survey builder ----------------
+  function renderSurveyBuilder() {
+    const box = $('surveyBox');
+    if (!box) return;
+    box.innerHTML = surveyDraft.length ? surveyDraft.map((q, i) => `
+      <div class="qcard" data-i="${i}">
+        <div class="qcard-head"><strong>Question ${i + 1}</strong>
+          <button class="mini" data-act="s-up" data-i="${i}" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button class="mini" data-act="s-down" data-i="${i}" ${i === surveyDraft.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="mini danger" data-act="s-del" data-i="${i}">Delete</button></div>
+        <div class="form-group"><input type="text" class="sq-text" data-i="${i}" maxlength="500" placeholder="Type the question" value="${escAttr(q.text)}"></div>
+        <div class="grid2">
+          <div class="form-group"><select class="sq-type" data-i="${i}">
+            <option value="choice" ${q.type === 'choice' ? 'selected' : ''}>Pick one answer</option>
+            <option value="text" ${q.type === 'text' ? 'selected' : ''}>Open text answer</option>
+            <option value="rating" ${q.type === 'rating' ? 'selected' : ''}>Rating from 1 to 5</option></select></div>
+          <label style="display:flex; align-items:center; gap:8px; font-weight:500; margin-bottom:16px;"><input type="checkbox" class="sq-req" data-i="${i}" ${q.required ? 'checked' : ''} style="width:18px;height:18px;"> Required</label>
+        </div>
+        ${q.type === 'choice' ? `<div class="form-group"><textarea class="sq-opts" data-i="${i}" rows="3" placeholder="One answer per line (at least 2)">${esc((q.options || []).join('\n'))}</textarea></div>` : ''}
+      </div>`).join('') : '<p class="text-muted" style="margin-bottom:12px;">No questions yet. Add your first question.</p>';
+  }
+  main.addEventListener('input', (e) => {
+    const t = e.target;
+    if (!t.dataset || t.dataset.i === undefined || !surveyDraft[t.dataset.i]) return;
+    const q = surveyDraft[t.dataset.i];
+    if (t.classList.contains('sq-text')) q.text = t.value;
+    if (t.classList.contains('sq-opts')) q.options = t.value.split('\n');
+  });
+  main.addEventListener('change', (e) => {
+    const t = e.target;
+    if (!t.dataset || t.dataset.i === undefined || !surveyDraft[t.dataset.i]) return;
+    const q = surveyDraft[t.dataset.i];
+    if (t.classList.contains('sq-type')) { q.type = t.value; if (q.type === 'choice' && (!q.options || q.options.length < 2)) q.options = ['', '']; renderSurveyBuilder(); }
+    if (t.classList.contains('sq-req')) q.required = t.checked;
+  });
+
+  // ---------------- survey results + assignment submissions ----------------
+  async function loadResults(u) {
+    const box = $('resultsBox');
+    if (!box) return;
+    box.innerHTML = '<p class="text-muted">Loading…</p>';
+    try {
+      const d = await B(`/units/${u.module_id}/activity`);
+      const rows = d.responses || [];
+      if (u.module_type === 'survey') box.innerHTML = surveyResultsHtml(u, rows);
+      else box.innerHTML = submissionsHtml(rows);
+    } catch (err) { box.innerHTML = `<div class="cr-note cr-note-warn">${esc(err.message)}</div>`; }
+  }
+  function surveyResultsHtml(u, rows) {
+    if (!rows.length) return '<p class="text-muted">No responses yet.</p>';
+    const qs = (u.settings && u.settings.questions) || [];
+    return `<p class="text-muted mb-16">${rows.length} response${rows.length === 1 ? '' : 's'}</p>` + qs.map((q) => {
+      const answers = rows.map((r) => ({ name: r.user_name, v: r.answers[q.id] })).filter((a) => a.v !== '' && a.v !== undefined);
+      let body = '';
+      if (q.type === 'text') {
+        body = answers.length ? answers.map((a) => `<div class="qline"><b>${esc(a.name)}:</b> ${esc(a.v)}</div>`).join('') : '<p class="text-muted">No answers.</p>';
+      } else {
+        const labels = q.type === 'rating' ? ['1', '2', '3', '4', '5'] : q.options;
+        const counts = labels.map((l) => answers.filter((a) => String(a.v) === l).length);
+        const max = Math.max(1, ...counts);
+        body = labels.map((l, i) => `<div class="res-line"><span>${esc(l)}</span><div class="bar"><i style="width:${(counts[i] / max) * 100}%"></i></div><b>${counts[i]}</b></div>`).join('');
+        if (q.type === 'rating' && answers.length) body += `<p class="text-muted mt-8">Average: ${(answers.reduce((s, a) => s + Number(a.v), 0) / answers.length).toFixed(1)}</p>`;
+      }
+      return `<div class="qcard"><div class="qcard-head"><strong>${esc(q.text)}</strong></div>${body}</div>`;
+    }).join('');
+  }
+  function submissionsHtml(rows) {
+    if (!rows.length) return '<p class="text-muted">No submissions yet.</p>';
+    return rows.map((r) => `
+      <div class="qcard">
+        <div class="qcard-head"><strong>${esc(r.user_name)}</strong>
+          <span class="badge ${r.status === 'Approved' ? 'badge-success' : r.status === 'Needs revision' ? 'badge-warning' : 'badge-info'}">${esc(r.status)}</span>
+          <span class="text-muted">${formatDate(r.submitted_at)}</span></div>
+        ${r.content ? `<div class="cr-text" style="font-size:14.5px; margin-bottom:8px;">${esc(r.content).replace(/\n/g, '<br>')}</div>` : ''}
+        ${CR.isHttp(r.link) ? `<p style="margin-bottom:8px;"><a href="${escAttr(r.link)}" target="_blank" rel="noopener noreferrer">${esc(r.link)} ↗</a></p>` : ''}
+        <textarea id="fb_${r.id}" rows="2" placeholder="Feedback for the trainee (optional)" style="min-height:0;">${esc(r.feedback || '')}</textarea>
+        <div style="margin-top:8px; display:flex; gap:8px;">
+          <button class="btn btn-primary btn-sm" data-act="review" data-id="${r.id}" data-status="Approved">Approve</button>
+          <button class="btn btn-secondary btn-sm" data-act="review" data-id="${r.id}" data-status="Needs revision">Needs revision</button></div>
+      </div>`).join('');
+  }
+  async function reviewSubmission(id, status) {
+    try {
+      await B(`/submissions/${id}/review`, 'PUT', { status, feedback: $(`fb_${id}`).value });
+      await loadResults(cur());
+      notify('Review saved');
+    } catch (err) { notify(err.message, 'error'); }
+  }
+
+  // ============================================================
+  // One click handler for everything inside the main area
+  // ============================================================
+  main.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const act = el.dataset.act;
+    const i = Number(el.dataset.i);
+    const actions = {
+      'to-overview': () => { e.preventDefault(); goOverview(); },
+      'open-unit': () => selectUnit(Number(el.dataset.id)),
+      'open-add': () => { $('addBtn').click(); },
+      'tab': () => showTab(el.dataset.tab),
+      'save-overview': saveOverview,
+      'save-unit': saveUnit,
+      'del-unit': () => deleteUnit(selectedId),
+      'cover-remove': removeCover,
+      'rte': () => rteCommand(el),
+      'unlink': unlinkToCopy,
+      'review': () => reviewSubmission(Number(el.dataset.id), el.dataset.status),
+      // test questions
+      'q-new': () => { qForm = { id: null, text: '', choices: [{ text: '', is_correct: true }, { text: '', is_correct: false }] }; renderQuiz(); },
+      'q-edit': () => {
+        const q = quizQs.find((x) => x.question_id === Number(el.dataset.id));
+        qForm = { id: q.question_id, text: q.question_text, choices: q.choices.map((c) => ({ text: c.choice_text, is_correct: !!c.is_correct })) };
+        renderQuiz();
+      },
+      'q-del': () => deleteQuestion(Number(el.dataset.id)),
+      'qf-add': () => { syncQForm(); qForm.choices.push({ text: '', is_correct: false }); renderQuiz(); },
+      'qf-del': () => {
+        syncQForm();
+        const wasCorrect = qForm.choices[i].is_correct;
+        qForm.choices.splice(i, 1);
+        if (wasCorrect) qForm.choices[0].is_correct = true;
+        renderQuiz();
+      },
+      'qf-save': saveQuestion,
+      'qf-cancel': () => { qForm = null; renderQuiz(); },
+      // survey questions
+      's-add': () => { surveyDraft.push({ id: rnd(), text: '', type: 'choice', options: ['', ''], required: false }); renderSurveyBuilder(); setDirty(true); },
+      's-del': () => { surveyDraft.splice(i, 1); renderSurveyBuilder(); setDirty(true); },
+      's-up': () => { [surveyDraft[i - 1], surveyDraft[i]] = [surveyDraft[i], surveyDraft[i - 1]]; renderSurveyBuilder(); setDirty(true); },
+      's-down': () => { [surveyDraft[i + 1], surveyDraft[i]] = [surveyDraft[i], surveyDraft[i + 1]]; renderSurveyBuilder(); setDirty(true); }
+    };
+    if (actions[act]) actions[act]();
+  });
+
+  // anything typed in the main area marks the form as changed (except the question forms, which have their own buttons)
+  function onEdit(e) {
+    if (!$('saveBtn') || e.target.closest('[data-nodirty]') || e.target.id === 'coverFile') return;
+    if (e.target.matches('input, textarea, select, [contenteditable]')) setDirty(true);
+    if (e.target.id === 'ov_desc') updateDescCount();
+  }
+  main.addEventListener('input', onEdit);
+  main.addEventListener('change', onEdit);
+
+  // ============================================================
+  // Clone / Link from another training
+  // ============================================================
+  let importMode = 'clone', importCourse = null, importPicked = new Set();
+
+  async function openImport(mode) {
+    closeMenus();
+    if (!confirmLeave()) return;
+    importMode = mode; importPicked = new Set(); importCourse = null;
+    $('importTitle').textContent = mode === 'link' ? 'Link from another course' : 'Clone from another course';
+    $('importHelp').textContent = mode === 'link'
+      ? 'Linked units are not copies: they always show the latest version of the original, and can only be edited in the original training.'
+      : 'Cloned units are independent copies. Changing them will not affect the original.';
+    $('importGo').textContent = mode === 'link' ? 'Link selected units' : 'Clone selected units';
+    $('importGo').disabled = true;
+    $('importUnits').innerHTML = '';
+    $('importModal').classList.remove('hidden');
+    try {
+      const all = await apiFetch('/courses');
+      const others = all.filter((c) => c.course_id !== courseId);
+      $('importCourse').innerHTML = '<option value="">Choose a training…</option>' + others.map((c) => `<option value="${c.course_id}">${esc(c.title)}</option>`).join('');
+      if (!others.length) $('importUnits').innerHTML = '<p class="text-muted">There are no other trainings yet.</p>';
+    } catch (err) { $('importUnits').innerHTML = `<div class="cr-note cr-note-warn">${esc(err.message)}</div>`; }
+  }
+  $('importCourse').addEventListener('change', async () => {
+    importPicked = new Set(); $('importGo').disabled = true;
+    const id = Number($('importCourse').value);
+    if (!id) { $('importUnits').innerHTML = ''; return; }
+    $('importUnits').innerHTML = '<p class="text-muted">Loading…</p>';
+    try {
+      const d = await B(`/courses/${id}/outline`);
+      importCourse = d;
+      if (!d.units.length) { $('importUnits').innerHTML = '<p class="text-muted">That training has no content yet.</p>'; return; }
+      $('importUnits').innerHTML = `<label class="pick-row" style="font-weight:600;"><input type="checkbox" id="pickAll"> Select all</label>` +
+        d.units.map((u) => {
+          const off = importMode === 'link' && u.module_type === 'section';
+          return `<label class="pick-row ${off ? 'off' : ''}"><input type="checkbox" class="pick" value="${u.module_id}" ${off ? 'disabled' : ''}>
+            <span class="ti ti-${u.module_type}">${CR.typeInfo(u.module_type).icon}</span><span>${esc(u.title)}</span>
+            <small class="text-muted" style="margin-left:auto;">${off ? 'sections can only be cloned' : CR.typeInfo(u.module_type).label}</small></label>`;
+        }).join('');
+    } catch (err) { $('importUnits').innerHTML = `<div class="cr-note cr-note-warn">${esc(err.message)}</div>`; }
+  });
+  $('importUnits').addEventListener('change', (e) => {
+    if (e.target.id === 'pickAll') document.querySelectorAll('.pick:not(:disabled)').forEach((c) => { c.checked = e.target.checked; });
+    importPicked = new Set(Array.from(document.querySelectorAll('.pick:checked')).map((c) => Number(c.value)));
+    const n = importPicked.size;
+    $('importGo').disabled = n === 0;
+    $('importGo').textContent = (importMode === 'link' ? 'Link' : 'Clone') + (n ? ` ${n} unit${n === 1 ? '' : 's'}` : ' selected units');
+  });
+  const closeImport = () => $('importModal').classList.add('hidden');
+  $('importClose').addEventListener('click', closeImport);
+  $('importCancel').addEventListener('click', closeImport);
+  $('importGo').addEventListener('click', async () => {
+    $('importGo').disabled = true;
+    try {
+      const r = await B(`/courses/${courseId}/import`, 'POST', {
+        source_course_id: importCourse.course.course_id, module_ids: Array.from(importPicked), mode: importMode });
+      closeImport();
+      await load(); renderSide(); if (!selectedId) renderMain();
+      notify(r.message);
+    } catch (err) { notify(err.message, 'error'); $('importGo').disabled = false; }
+  });
+
+  // ============================================================
+  // Start
+  // ============================================================
+  (async function init() {
+    try {
+      await load();
+      const wanted = Number(params.get('unit'));
+      if (wanted && units.some((u) => u.module_id === wanted || u.content_id === wanted)) {
+        selectedId = (units.find((u) => u.module_id === wanted) || units.find((u) => u.content_id === wanted)).module_id;
+      }
+      renderSide();
+      renderMain();
+    } catch (err) {
+      main.innerHTML = `<div class="b-body"><div class="cr-note cr-note-warn">${esc(err.message)}</div><p><a href="trainings.html" class="btn btn-secondary">← Back to Trainings</a></p></div>`;
+    }
+  })();
+</script>
+</body>
+</html>
