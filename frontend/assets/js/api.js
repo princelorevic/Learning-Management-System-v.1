@@ -163,3 +163,22 @@ function toast(message, type = 'success') {
   box.appendChild(el);
   setTimeout(() => el.remove(), 3200);
 }
+
+
+// ---------------- Auto logout ----------------
+(function () {
+  const IDLE_MINUTES = 15;
+  let timer;
+  function reset() {
+    clearTimeout(timer);
+    if (!getToken()) return;
+    timer = setTimeout(() => {
+      clearSession();
+      alert('You were logged out because you were inactive.');
+      window.location.href = resolvePath('login.html');
+    }, IDLE_MINUTES * 60 * 1000);
+  }
+  ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach((e) =>
+    window.addEventListener(e, reset, { passive: true }));
+  reset();
+})();
