@@ -7,20 +7,25 @@
 //    the API runs on the same machine at port 3000 (local dev).
 const API_BASE_URL = window.LMS_API_BASE_URL || 'https://learning-management-system-v-1.onrender.com/api';
 
-// ---------------- Auth storage ----------------
-function getToken() { return localStorage.getItem('lms_token'); }
+// sessionStorage: nabubura kapag isinara ang tab / browser
+function getToken() { return sessionStorage.getItem('lms_token'); }
 function getUser() {
-  try { return JSON.parse(localStorage.getItem('lms_user') || 'null'); }
+  try { return JSON.parse(sessionStorage.getItem('lms_user') || 'null'); }
   catch { return null; }
 }
+
 function setSession(token, user) {
-  localStorage.setItem('lms_token', token);
-  localStorage.setItem('lms_user', JSON.stringify(user));
+  sessionStorage.setItem('lms_token', token);
+  sessionStorage.setItem('lms_user', JSON.stringify(user));
 }
+
 function clearSession() {
-  localStorage.removeItem('lms_token');
+  sessionStorage.removeItem('lms_token');
+  sessionStorage.removeItem('lms_user');
+  localStorage.removeItem('lms_token');   
   localStorage.removeItem('lms_user');
 }
+
 function logout() {
   clearSession();
   window.location.href = resolvePath('login.html');
